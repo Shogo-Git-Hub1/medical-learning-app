@@ -1,11 +1,12 @@
 import Link from "next/link";
+import { getAllLessons } from "@/data/db";
 
 export default function RoadmapPage() {
-  const lessons = [
-    { id: "1", title: "解剖学 序論", done: false, locked: false },
-    { id: "2", title: "生理学 細胞", done: false, locked: true },
-    { id: "3", title: "薬理学 基礎", done: false, locked: true },
-  ];
+  const lessons = getAllLessons().map((lesson, i) => ({
+    ...lesson,
+    done: false,
+    locked: i > 0,
+  }));
 
   return (
     <div className="space-y-6">
@@ -22,6 +23,9 @@ export default function RoadmapPage() {
                 className="block rounded-xl border-2 p-4 border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed"
               >
                 <span className="font-semibold">{lesson.title}</span>
+                {lesson.subject && (
+                  <span className="ml-2 text-sm text-slate-400">{lesson.subject}</span>
+                )}
                 <span className="ml-2 text-sm">🔒 前のレッスンを完了してください</span>
               </div>
             ) : (
@@ -30,6 +34,9 @@ export default function RoadmapPage() {
                 className="block rounded-xl border-2 p-4 border-primary bg-white hover:bg-green-50 text-slate-800 transition"
               >
                 <span className="font-semibold">{lesson.title}</span>
+                {lesson.subject && (
+                  <span className="ml-2 text-sm text-slate-500">{lesson.subject}</span>
+                )}
                 {lesson.done && (
                   <span className="ml-2 text-sm text-green-600">✓ 完了</span>
                 )}
