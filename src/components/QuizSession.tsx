@@ -3,13 +3,16 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { Question } from "@/lib/types";
+import { useProgress } from "@/hooks/useProgress";
 
 type Props = {
   questions: Question[];
+  lessonId: string;
   lessonTitle: string;
 };
 
-export function QuizSession({ questions, lessonTitle }: Props) {
+export function QuizSession({ questions, lessonId, lessonTitle }: Props) {
+  const { recordAnswer, completeLesson } = useProgress();
   const [index, setIndex] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
@@ -22,13 +25,20 @@ export function QuizSession({ questions, lessonTitle }: Props) {
 
   const handleSelect = (optionId: string) => {
     if (showFeedback) return;
+    const correctAnswer = optionId === current.correctOptionId;
     setSelectedId(optionId);
     setShowFeedback(true);
-    setResults((r) => [...r, optionId === current.correctOptionId]);
+    setResults((r) => [...r, correctAnswer]);
+    recordAnswer(current.id, correctAnswer);
   };
 
+  const [showCompleted, setShowCompleted] = useState(false);
+
   const handleNext = () => {
-    if (!isLast) {
+    if (isLast) {
+      completeLesson(lessonId);
+      setShowCompleted(true);
+    } else {
       setIndex((i) => i + 1);
       setSelectedId(null);
       setShowFeedback(false);
@@ -46,8 +56,8 @@ export function QuizSession({ questions, lessonTitle }: Props) {
     );
   }
 
-  // 全問終了
-  if (showFeedback && isLast) {
+  // 全問終了（「結果を見る」クリック後）
+  if (showCompleted) {
     const correctCount = results.filter(Boolean).length + (isCorrect ? 1 : 0);
     const total = questions.length;
 

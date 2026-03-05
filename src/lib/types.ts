@@ -33,6 +33,8 @@ export type Lesson = {
   /** このレッスンに含まれる問題IDの並び */
   questionIds: string[];
   subject?: string;
+  /** 試験タグ（医師国家試験など） */
+  examTag?: string;
   /** ロードマップ上の並び順 */
   order: number;
 };

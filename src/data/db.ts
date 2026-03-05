@@ -103,9 +103,9 @@ export const questionDb: QuestionDatabase = {
     },
   ],
   lessons: [
-    { id: "1", title: "解剖学 序論", questionIds: ["q-anatomy-1", "q-anatomy-2", "q-anatomy-3"], subject: "解剖学", order: 1 },
-    { id: "2", title: "生理学 細胞", questionIds: ["q-physio-1", "q-physio-2"], subject: "生理学", order: 2 },
-    { id: "3", title: "薬理学 基礎", questionIds: ["q-pharma-1"], subject: "薬理学", order: 3 },
+    { id: "1", title: "解剖学 序論", questionIds: ["q-anatomy-1", "q-anatomy-2", "q-anatomy-3"], subject: "解剖学", examTag: "医師国家試験", order: 1 },
+    { id: "2", title: "生理学 細胞", questionIds: ["q-physio-1", "q-physio-2"], subject: "生理学", examTag: "医師国家試験", order: 2 },
+    { id: "3", title: "薬理学 基礎", questionIds: ["q-pharma-1"], subject: "薬理学", examTag: "医師国家試験", order: 3 },
   ],
 };
 
@@ -129,4 +129,38 @@ export function getLessonWithQuestions(lessonId: string) {
 /** 全レッスンをロードマップ順で取得 */
 export function getAllLessons() {
   return [...questionDb.lessons].sort((a, b) => a.order - b.order);
+}
+
+/** 科目でフィルタしたレッスン一覧 */
+export function getLessonsBySubject(subject: string | null) {
+  const all = getAllLessons();
+  if (!subject) return all;
+  return all.filter((l) => l.subject === subject);
+}
+
+/** 試験タグでフィルタしたレッスン一覧 */
+export function getLessonsByExamTag(examTag: string | null) {
+  const all = getAllLessons();
+  if (!examTag) return all;
+  return all.filter((l) => l.examTag === examTag);
+}
+
+/** 科目＋試験タグの両方でフィルタ（指定がなければその条件は無視） */
+export function getLessonsFiltered(subject: string | null, examTag: string | null) {
+  let list = getAllLessons();
+  if (subject) list = list.filter((l) => l.subject === subject);
+  if (examTag) list = list.filter((l) => l.examTag === examTag);
+  return list;
+}
+
+/** 実際に使われている科目一覧（レッスンから抽出） */
+export function getSubjectsInUse(): string[] {
+  const set = new Set(questionDb.lessons.map((l) => l.subject).filter(Boolean));
+  return [...set] as string[];
+}
+
+/** 実際に使われている試験タグ一覧（レッスンから抽出） */
+export function getExamTagsInUse(): string[] {
+  const set = new Set(questionDb.lessons.map((l) => l.examTag).filter(Boolean));
+  return [...set] as string[];
 }

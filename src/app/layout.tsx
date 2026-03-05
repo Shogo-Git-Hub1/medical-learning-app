@@ -1,10 +1,25 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "医療学習アプリ",
   description: "資格・試験対策 × 科目別で学ぶ、継続したくなる医療系学習",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "医療学習",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#58cc02",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -21,6 +36,7 @@ export default function RootLayout({
             <nav className="flex gap-4">
               <Link href="/" className="text-white/90 hover:text-white text-sm">ホーム</Link>
               <Link href="/roadmap" className="text-white/90 hover:text-white text-sm">ロードマップ</Link>
+              <Link href="/browse" className="text-white/90 hover:text-white text-sm">ブラウズ</Link>
             </nav>
           </div>
         </header>

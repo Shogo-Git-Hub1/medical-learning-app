@@ -1,6 +1,10 @@
 import Link from "next/link";
-import { getLessonWithQuestions } from "@/data/db";
-import { QuizSession } from "@/components/QuizSession";
+import { getLessonWithQuestions, getAllLessons } from "@/data/db";
+import { LessonView } from "@/components/LessonView";
+
+export function generateStaticParams() {
+  return getAllLessons().map((lesson) => ({ id: lesson.id }));
+}
 
 export default async function LessonPage({
   params,
@@ -37,7 +41,7 @@ export default async function LessonPage({
         </Link>
         <h1 className="text-xl font-bold text-slate-800">{lesson.title}</h1>
       </div>
-      <QuizSession questions={questions} lessonTitle={lesson.title} />
+      <LessonView lesson={lesson} questions={questions} />
     </div>
   );
 }
