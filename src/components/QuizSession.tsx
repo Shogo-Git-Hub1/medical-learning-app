@@ -5,6 +5,34 @@ import Link from "next/link";
 import type { Question } from "@/lib/types";
 import { useProgress } from "@/hooks/useProgress";
 
+function ReportQuestionLink({
+  lessonId,
+  lessonTitle,
+  questionId,
+  questionText,
+}: {
+  lessonId: string;
+  lessonTitle: string;
+  questionId: string;
+  questionText: string;
+}) {
+  const params = new URLSearchParams({
+    report: "1",
+    lessonId,
+    lessonTitle,
+    questionId,
+    questionText: questionText.slice(0, 120),
+  });
+  return (
+    <Link
+      href={`/contact?${params.toString()}`}
+      className="text-xs text-slate-500 hover:text-slate-700 underline"
+    >
+      この問題を報告
+    </Link>
+  );
+}
+
 type Props = {
   questions: Question[];
   lessonId: string;
@@ -100,6 +128,14 @@ export function QuizSession({ questions, lessonId, lessonTitle }: Props) {
         <h2 className="text-lg font-semibold text-slate-800 leading-relaxed">
           {current.text}
         </h2>
+        <div className="mt-4 text-right">
+          <ReportQuestionLink
+            lessonId={lessonId}
+            lessonTitle={lessonTitle}
+            questionId={current.id}
+            questionText={current.text}
+          />
+        </div>
         <ul className="mt-6 space-y-3">
           {current.options.map((opt) => {
             const chosen = selectedId === opt.id;

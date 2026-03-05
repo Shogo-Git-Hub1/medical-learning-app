@@ -5,9 +5,9 @@ import Link from "next/link";
 import { useProgress } from "@/hooks/useProgress";
 import {
   getLessonsFiltered,
+  getLessonsGroupedBySubject,
   getSubjectsInUse,
   getExamTagsInUse,
-  getAllLessons,
 } from "@/data/db";
 
 export function BrowseContent() {
@@ -22,11 +22,15 @@ export function BrowseContent() {
     [subject, examTag]
   );
 
-  const ordered = getAllLessons();
-  const isUnlocked = (lessonId: string) => {
-    const idx = ordered.findIndex((l) => l.id === lessonId);
+  const groupedBySubject = useMemo(() => getLessonsGroupedBySubject(), []);
+  /** 同一分野内で、前のレッスンが完了していればアンロック */
+  const isUnlocked = (lessonId: string, lessonSubject?: string) => {
+    const sub = lessonSubject ?? lessons.find((l) => l.id === lessonId)?.subject;
+    if (!sub || !groupedBySubject[sub]) return true;
+    const list = groupedBySubject[sub];
+    const idx = list.findIndex((l) => l.id === lessonId);
     if (idx <= 0) return true;
-    return progress.completedLessonIds.includes(ordered[idx - 1].id);
+    return progress.completedLessonIds.includes(list[idx - 1].id);
   };
 
   return (
@@ -77,9 +81,8 @@ export function BrowseContent() {
           <p className="text-slate-500 py-4">該当するレッスンがありません。</p>
         ) : (
           <ul className="space-y-3">
-            {lessons.map((lesson, idx) => {
-              const globalIndex = ordered.findIndex((l) => l.id === lesson.id);
-              const unlocked = globalIndex >= 0 && isUnlocked(lesson.id);
+            {lessons.map((lesson) => {
+              const unlocked = isUnlocked(lesson.id, lesson.subject);
               const done = progress.completedLessonIds.includes(lesson.id);
 
               if (!unlocked) {
@@ -90,7 +93,7 @@ export function BrowseContent() {
                       {lesson.subject && (
                         <span className="ml-2 text-sm text-slate-400">{lesson.subject}</span>
                       )}
-                      <span className="ml-2 text-sm">🔒 前のレッスンを完了してください</span>
+                      <span className="ml-2 text-sm">🔒 この分野の前のレッスンを完了してください</span>
                     </div>
                   </li>
                 );

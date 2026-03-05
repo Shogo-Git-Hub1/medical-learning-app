@@ -35,8 +35,10 @@ export type Lesson = {
   subject?: string;
   /** 試験タグ（医師国家試験など） */
   examTag?: string;
-  /** ロードマップ上の並び順 */
+  /** 全体ロードマップ用の並び順（後方互換） */
   order: number;
+  /** 同一分野内での並び順（難易度順の連なり） */
+  orderInSubject: number;
 };
 
 /**

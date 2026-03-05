@@ -37,6 +37,7 @@ export default function RootLayout({
               <Link href="/" className="text-white/90 hover:text-white text-sm">ホーム</Link>
               <Link href="/roadmap" className="text-white/90 hover:text-white text-sm">ロードマップ</Link>
               <Link href="/browse" className="text-white/90 hover:text-white text-sm">ブラウズ</Link>
+              <Link href="/contact" className="text-white/90 hover:text-white text-sm">お問い合わせ</Link>
             </nav>
           </div>
         </header>
