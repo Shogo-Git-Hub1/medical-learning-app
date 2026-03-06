@@ -8,6 +8,7 @@ import {
   ROADMAP_LEVELS,
 } from "@/services/lessonService";
 import { ProgressBar } from "@/components/ui/ProgressBar";
+import { CharacterLine } from "@/components/CharacterLine";
 import type { Lesson } from "@/types";
 
 export function RoadmapList() {
@@ -16,6 +17,12 @@ export function RoadmapList() {
 
   return (
     <div className="space-y-8">
+      <CharacterLine
+        characterId="shirin"
+        lineKey="roadmapHint"
+        size="sm"
+        className="mb-2"
+      />
       {SUBJECT_DISPLAY_ORDER.map((subject) => {
         const lessons = grouped[subject];
         if (!lessons || lessons.length === 0) return null;

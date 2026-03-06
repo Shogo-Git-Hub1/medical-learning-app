@@ -97,6 +97,38 @@ const config: Config = {
           "85%": { opacity: "1" },
           "100%": { transform: "translate(-50%, 100%)", opacity: "0.4" },
         },
+        /** スカルン：不正解時・カタカタ震えて落ち込む */
+        "character-skurun-shake": {
+          "0%, 100%": { transform: "translateX(0) rotate(0deg)" },
+          "10%": { transform: "translateX(-2px) rotate(-1deg)" },
+          "20%": { transform: "translateX(2px) rotate(1deg)" },
+          "30%": { transform: "translateX(-2px) rotate(-1deg)" },
+          "40%": { transform: "translateX(2px) rotate(1deg)" },
+          "50%": { transform: "translateX(-1px) rotate(-0.5deg)" },
+          "60%": { transform: "translateX(1px) rotate(0.5deg)" },
+          "70%": { transform: "translateX(-1px) rotate(-0.5deg)" },
+          "80%": { transform: "translateX(1px) rotate(0.5deg)" },
+          "90%": { transform: "translateX(-1px) rotate(0deg)" },
+        },
+        /** スカルン：正解時・バラバラになって喜ぶ（弾む＋軽く揺れる） */
+        "character-skurun-happy": {
+          "0%": { transform: "scale(1) translateY(0)" },
+          "25%": { transform: "scale(1.15) translateY(-4px)" },
+          "50%": { transform: "scale(1.08) translateY(2px)" },
+          "75%": { transform: "scale(1.12) translateY(-2px)" },
+          "100%": { transform: "scale(1.05) translateY(0)" },
+        },
+        /** キャラクター：待機時・ゆっくり浮遊 */
+        "character-idle-float": {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-3px)" },
+        },
+        /** シリン：元気に軽く弾む（ロードマップ・レッスン完了など） */
+        "character-shirin-bounce": {
+          "0%, 100%": { transform: "scale(1) translateY(0)" },
+          "40%": { transform: "scale(1.05) translateY(-2px)" },
+          "70%": { transform: "scale(1.02) translateY(1px)" },
+        },
       },
       animation: {
         "feedback-pop": "feedback-pop 0.4s ease-out forwards",
@@ -107,6 +139,10 @@ const config: Config = {
         "lightning-overlay-fade-out": "lightning-overlay-fade-out 1.5s ease-out forwards",
         "option-correct-pop": "option-correct-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards",
         "lightning-bolt-fall": "lightning-bolt-fall 1.1s ease-in forwards",
+        "character-skurun-shake": "character-skurun-shake 0.6s ease-in-out forwards",
+        "character-skurun-happy": "character-skurun-happy 0.5s ease-out forwards",
+        "character-idle-float": "character-idle-float 2.5s ease-in-out infinite",
+        "character-shirin-bounce": "character-shirin-bounce 0.6s ease-out forwards",
       },
     },
   },

@@ -2,6 +2,8 @@
 
 import { useProgress } from "@/hooks/useProgress";
 import { PushButton } from "@/components/ui/PushButton";
+import { NavigatorsImage } from "@/components/CharacterAvatar";
+import { CharacterLine } from "@/components/CharacterLine";
 
 function DashboardCard({
   title,
@@ -36,6 +38,13 @@ export function HomeDashboard() {
   return (
     <div className="space-y-8">
       <section>
+        <NavigatorsImage className="mb-4" />
+        <CharacterLine
+          characterId="skurun"
+          lineKey="homeGreeting"
+          size="sm"
+          className="mb-4"
+        />
         <h2 className="text-xl font-bold text-pastel-ink mb-4">今日の学習</h2>
         <div className="grid gap-3">
           <DashboardCard

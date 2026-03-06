@@ -9,18 +9,7 @@ import { shuffle } from "@/lib/utils";
 import { PushButton } from "@/components/ui/PushButton";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { LightningComboOverlay } from "@/components/LightningComboOverlay";
-
-/** 正解時のメッセージ（短く熱く・ランダムで1つ表示） */
-const CORRECT_MESSAGES = [
-  "正解！！ よくやった！",
-  "正解！！ ナイス！",
-  "その通り！！ すごい！",
-  "正解！！ その調子！",
-  "バッチリ！！",
-  "正解！！ いいね！",
-  "ピンポン！！ 正解！",
-  "正解！！ さすが！",
-];
+import { CharacterLine } from "@/components/CharacterLine";
 
 /** 選択肢ごとのパステル背景（デザインガイドの6色ベース） */
 const OPTION_PASTEL_CLASSES = [
@@ -70,7 +59,6 @@ export function QuizSession({ questions, lessonId, lessonTitle }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
   const [results, setResults] = useState<boolean[]>([]);
-  const [correctMessage, setCorrectMessage] = useState("");
 
   /** 各問題の選択肢の表示順をランダムにする（レッスン・問題セットが変わったときだけ再計算） */
   const questionIdsKey = questions.map((q) => q.id).join(",");
@@ -103,11 +91,6 @@ export function QuizSession({ questions, lessonId, lessonTitle }: Props) {
     setSelectedId(optionId);
     setShowFeedback(true);
     setResults((r) => [...r, correctAnswer]);
-    if (correctAnswer) {
-      setCorrectMessage(
-        CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)]
-      );
-    }
     recordAnswer(current.id, correctAnswer, comboAfter);
   };
 
@@ -159,18 +142,22 @@ export function QuizSession({ questions, lessonId, lessonTitle }: Props) {
   if (showCompleted) {
     const correctCount = results.filter(Boolean).length + (isCorrect ? 1 : 0);
     const total = displayQuestions.length;
+    const isGoodScore = total > 0 && correctCount >= total * 0.8;
 
     return (
       <div className="space-y-6">
         <div className="rounded-xl border-2 border-pastel-primary bg-pastel-mint p-6 text-center">
           <h2 className="text-xl font-bold text-pastel-ink">レッスン完了</h2>
-          <p className="mt-2 text-pastel-ink/80">
-            {lessonTitle}
-          </p>
+          <p className="mt-2 text-pastel-ink/80">{lessonTitle}</p>
           <p className="mt-4 text-2xl font-bold text-pastel-primary-dark">
             {correctCount} / {total} 問正解
           </p>
         </div>
+        <CharacterLine
+          characterId="shirin"
+          lineKey={isGoodScore ? "lessonCompleteGood" : "lessonComplete"}
+          size="sm"
+        />
         <div className="flex justify-center gap-4">
           <PushButton href="/roadmap">ロードマップに戻る</PushButton>
           <PushButton href="/" variant="outline">ホーム</PushButton>
@@ -179,9 +166,9 @@ export function QuizSession({ questions, lessonId, lessonTitle }: Props) {
     );
   }
 
-  // 1問の表示（藍色背景で視認性向上）
+  // 1問の表示（白背景）
   return (
-    <div className="min-h-[60vh] rounded-2xl bg-indigo-quiz p-4 sm:p-6 -mx-4 sm:-mx-0 space-y-6">
+    <div className="min-h-[60vh] rounded-2xl bg-white p-4 sm:p-6 -mx-4 sm:-mx-0 space-y-6">
       {showLightningOverlay && (
         <LightningComboOverlay
           key={displayCombo}
@@ -190,19 +177,19 @@ export function QuizSession({ questions, lessonId, lessonTitle }: Props) {
           duration={1500}
         />
       )}
-      <div className="text-white">
+      <div className="text-pastel-ink">
         <ProgressBar
           current={results.filter(Boolean).length}
           total={displayQuestions.length}
           label="正解"
           variant="quiz"
           className="mb-1"
-          labelClassName="text-white"
+          labelClassName="text-pastel-ink"
         />
         <div className="flex items-center justify-end">
           {displayCombo >= 1 && (
             <div
-              className="flex items-center gap-1 rounded-full bg-amber-400/90 px-3 py-1 text-sm font-semibold text-indigo-quiz"
+              className="flex items-center gap-1 rounded-full bg-amber-400/90 px-3 py-1 text-sm font-semibold text-pastel-ink"
               aria-label={`${displayCombo} 連続正解`}
             >
               <span aria-hidden>🔥</span>
@@ -262,23 +249,49 @@ export function QuizSession({ questions, lessonId, lessonTitle }: Props) {
 
       {showFeedback && (
         <div className="space-y-4">
+          {isCorrect ? (
+            <CharacterLine
+              characterId="skurun"
+              lineKey="quizCorrect"
+              variant="correct"
+              size="sm"
+              className="animate-feedback-pop"
+            />
+          ) : (
+            <>
+              <CharacterLine
+                characterId="skurun"
+                lineKey="quizWrong"
+                variant="wrong"
+                size="sm"
+              />
+              {correct?.text && (
+                <CharacterLine
+                  characterId="regi"
+                  lineKey="regiExplanation"
+                  replacements={{ correct: correct.text }}
+                  size="sm"
+                />
+              )}
+            </>
+          )}
           <div
             className={`rounded-xl border-2 p-4 ${
-              isCorrect ? "border-pastel-success bg-pastel-mint animate-feedback-pop" : "border-pastel-error bg-pastel-rose"
+              isCorrect ? "border-pastel-success bg-pastel-mint" : "border-pastel-error bg-pastel-rose"
             }`}
           >
-            <p className="font-semibold text-pastel-ink">
-              {isCorrect
-                ? `${correctMessage}${displayCombo >= 2 ? ` ${displayCombo} コンボ！` : ""}`
-                : `不正解。正解は「${correct?.text}」です。${displayCombo >= 1 ? " コンボが途切れました。" : ""}`}
-            </p>
             {isCorrect && (
-              <p className="mt-1 text-sm text-pastel-primary-dark">
+              <p className="text-sm text-pastel-primary-dark">
                 +{getXPForCorrect(displayCombo)} XP
                 {displayCombo >= 2 && (
-                  <span className="ml-1 text-pastel-primary-dark/80">（コンボボーナス）</span>
+                  <span className="ml-1 text-pastel-primary-dark/80">
+                    （{displayCombo} コンボ！ コンボボーナス）
+                  </span>
                 )}
               </p>
+            )}
+            {!isCorrect && displayCombo >= 1 && (
+              <p className="text-sm text-pastel-ink/80">コンボが途切れました。</p>
             )}
             {current.explanation && (
               <p className="mt-2 text-sm text-pastel-ink/80">{current.explanation}</p>
