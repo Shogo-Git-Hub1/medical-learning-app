@@ -45,5 +45,6 @@ export const pathologyLessons: Lesson[] = [
     examTag: "医師国家試験",
     order: 5,
     orderInSubject: 1,
+    level: 1,
   },
 ];

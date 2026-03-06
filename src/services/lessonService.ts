@@ -38,16 +38,19 @@ export function getAllLessons() {
   return result;
 }
 
+/** ロードマップの段階（1〜15） */
+export const ROADMAP_LEVELS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] as const;
+
 /**
- * 分野ごとにレッスンをまとめ、各分野内は orderInSubject（難易度順）でソート
- * ロードマップで「解剖学 → 生理学 → …」の連なりを表示するために使用
+ * 分野ごとにレッスンをまとめ、各分野内は level → orderInSubject 順でソート
+ * ロードマップで「解剖学 → 生理学 → …」の連なりとレベル1〜15を表示するために使用
  */
 export function getLessonsGroupedBySubject(): Record<string, typeof questionDb.lessons> {
   const map: Record<string, typeof questionDb.lessons> = {};
   for (const subject of SUBJECT_DISPLAY_ORDER) {
     const lessons = questionDb.lessons
       .filter((l) => l.subject === subject)
-      .sort((a, b) => a.orderInSubject - b.orderInSubject);
+      .sort((a, b) => (a.level - b.level) || (a.orderInSubject - b.orderInSubject));
     if (lessons.length > 0) map[subject] = lessons;
   }
   return map;

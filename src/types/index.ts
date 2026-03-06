@@ -39,6 +39,8 @@ export type Lesson = {
   order: number;
   /** 同一分野内での並び順（難易度順の連なり） */
   orderInSubject: number;
+  /** ロードマップ上の段階（1〜15） */
+  level: number;
 };
 
 /**

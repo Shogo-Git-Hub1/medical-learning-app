@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
+import { PushButton } from "@/components/ui/PushButton";
 
 const INQUIRY_TYPE = "inquiry" as const;
 const REPORT_TYPE = "report" as const;
@@ -123,14 +123,14 @@ export function ContactForm() {
 
   if (submitted) {
     return (
-      <div className="rounded-xl border-2 border-primary bg-green-50 p-6">
-        <p className="font-semibold text-slate-800">送信手順を開始しました</p>
-        <p className="mt-2 text-sm text-slate-600">
+      <div className="rounded-xl border-2 border-pastel-primary bg-pastel-mint p-6">
+        <p className="font-semibold text-pastel-ink">送信手順を開始しました</p>
+        <p className="mt-2 text-sm text-pastel-ink/80">
           お使いのメールソフトが開きます。内容をご確認のうえ送信してください。メールが開かない場合は、お手数ですが送信先に直接ご連絡ください。
         </p>
-        <Link href="/" className="mt-4 inline-block text-primary font-medium underline">
+        <PushButton href="/" variant="outline" className="mt-4">
           ← ホームに戻る
-        </Link>
+        </PushButton>
       </div>
     );
   }
@@ -227,28 +227,18 @@ export function ContactForm() {
           value={body}
           onChange={(e) => setBody(e.target.value)}
           rows={5}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800"
+          className="w-full rounded-xl border-2 border-pastel-border bg-pastel-card px-3 py-2 text-pastel-ink"
           required
           placeholder={formType === REPORT_TYPE ? "例：正解が〇〇だと思われます。根拠は…" : ""}
         />
       </div>
 
       <div className="flex gap-3">
-        <button
-          type="submit"
-          className="rounded-xl bg-primary px-6 py-3 font-semibold text-white shadow-md hover:bg-primary-dark transition"
-        >
-          メールで送信
-        </button>
-        <Link
-          href="/"
-          className="rounded-xl border-2 border-slate-300 px-6 py-3 font-semibold text-slate-700 hover:bg-slate-50 transition"
-        >
-          キャンセル
-        </Link>
+        <PushButton type="submit">メールで送信</PushButton>
+        <PushButton href="/" variant="outline">キャンセル</PushButton>
       </div>
 
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-pastel-ink/60">
         「メールで送信」を押すと、お使いのメールソフトが開きます。送信先: {MAIL_TO}
       </p>
     </form>

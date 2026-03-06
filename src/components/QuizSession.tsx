@@ -1,9 +1,34 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import type { Question } from "@/types";
 import { useProgress } from "@/hooks/useProgress";
+import { getXPForCorrect } from "@/lib/progress";
+import { shuffle } from "@/lib/utils";
+import { PushButton } from "@/components/ui/PushButton";
+import { ProgressBar } from "@/components/ui/ProgressBar";
+import { LightningComboOverlay } from "@/components/LightningComboOverlay";
+
+/** 正解時のメッセージ（短く熱く・ランダムで1つ表示） */
+const CORRECT_MESSAGES = [
+  "正解！！ よくやった！",
+  "正解！！ ナイス！",
+  "その通り！！ すごい！",
+  "正解！！ その調子！",
+  "バッチリ！！",
+  "正解！！ いいね！",
+  "ピンポン！！ 正解！",
+  "正解！！ さすが！",
+];
+
+/** 選択肢ごとのパステル背景（デザインガイドの6色ベース） */
+const OPTION_PASTEL_CLASSES = [
+  "!bg-pastel-blue/80 !border-pastel-blue/60",
+  "!bg-pastel-pink/70 !border-pastel-pink/50",
+  "!bg-[#9069CD]/25 !border-pastel-purple/40",
+  "!bg-[#FFC800]/20 !border-[#FFC800]/50",
+] as const;
 
 function ReportQuestionLink({
   lessonId,
@@ -26,7 +51,7 @@ function ReportQuestionLink({
   return (
     <Link
       href={`/contact?${params.toString()}`}
-      className="text-xs text-slate-500 hover:text-slate-700 underline"
+      className="text-xs text-pastel-ink/60 hover:text-pastel-ink underline"
     >
       この問題を報告
     </Link>
@@ -45,22 +70,68 @@ export function QuizSession({ questions, lessonId, lessonTitle }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
   const [results, setResults] = useState<boolean[]>([]);
+  const [correctMessage, setCorrectMessage] = useState("");
 
-  const current = questions[index];
-  const isLast = index === questions.length - 1;
+  /** 各問題の選択肢の表示順をランダムにする（レッスン・問題セットが変わったときだけ再計算） */
+  const questionIdsKey = questions.map((q) => q.id).join(",");
+  const displayQuestions = useMemo(
+    () =>
+      questions.map((q) => ({
+        ...q,
+        options: shuffle([...q.options]),
+      })),
+    [lessonId, questionIdsKey] // eslint-disable-line react-hooks/exhaustive-deps -- questions を直指定すると参照変動で毎回シャッフルされるため ID 文字列で比較
+  );
+
+  const current = displayQuestions[index];
+  const isLast = index === displayQuestions.length - 1;
   const correct = current?.options.find((o) => o.id === current.correctOptionId);
   const isCorrect = selectedId === current?.correctOptionId;
+
+  /** 末尾から連続した正解の数（Duolingo風コンボ） */
+  const getComboFromResults = (r: boolean[]) => {
+    let count = 0;
+    for (let i = r.length - 1; i >= 0 && r[i]; i--) count++;
+    return count;
+  };
 
   const handleSelect = (optionId: string) => {
     if (showFeedback) return;
     const correctAnswer = optionId === current.correctOptionId;
+    const comboBefore = getComboFromResults(results);
+    const comboAfter = correctAnswer ? comboBefore + 1 : 0;
     setSelectedId(optionId);
     setShowFeedback(true);
     setResults((r) => [...r, correctAnswer]);
-    recordAnswer(current.id, correctAnswer);
+    if (correctAnswer) {
+      setCorrectMessage(
+        CORRECT_MESSAGES[Math.floor(Math.random() * CORRECT_MESSAGES.length)]
+      );
+    }
+    recordAnswer(current.id, correctAnswer, comboAfter);
   };
 
+  /** 表示用：現在の連続正解コンボ数（直前の結果まで） */
+  const displayCombo = getComboFromResults(results);
+
   const [showCompleted, setShowCompleted] = useState(false);
+  /** 5の倍数コンボ達成時の雷オーバーレイ（画面全体・一瞬表示） */
+  const [showLightningOverlay, setShowLightningOverlay] = useState(false);
+
+  useEffect(() => {
+    if (
+      showFeedback &&
+      isCorrect &&
+      displayCombo >= 5 &&
+      displayCombo % 5 === 0
+    ) {
+      setShowLightningOverlay(true);
+      const t = setTimeout(() => setShowLightningOverlay(false), 1500);
+      return () => clearTimeout(t);
+    } else {
+      setShowLightningOverlay(false);
+    }
+  }, [showFeedback, isCorrect, displayCombo]);
 
   const handleNext = () => {
     if (isLast) {
@@ -73,13 +144,13 @@ export function QuizSession({ questions, lessonId, lessonTitle }: Props) {
     }
   };
 
-  if (questions.length === 0) {
+  if (displayQuestions.length === 0) {
     return (
-      <div className="rounded-xl border-2 border-amber-200 bg-amber-50 p-6 text-center text-slate-700">
+      <div className="rounded-xl border-2 border-pastel-orange bg-pastel-rose/50 p-6 text-center text-pastel-ink">
         <p className="font-medium">このレッスンには問題がありません。</p>
-        <Link href="/roadmap" className="mt-4 inline-block text-primary underline">
+        <PushButton href="/roadmap" variant="primary" className="mt-4">
           ロードマップに戻る
-        </Link>
+        </PushButton>
       </div>
     );
   }
@@ -87,45 +158,61 @@ export function QuizSession({ questions, lessonId, lessonTitle }: Props) {
   // 全問終了（「結果を見る」クリック後）
   if (showCompleted) {
     const correctCount = results.filter(Boolean).length + (isCorrect ? 1 : 0);
-    const total = questions.length;
+    const total = displayQuestions.length;
 
     return (
       <div className="space-y-6">
-        <div className="rounded-xl border-2 border-primary bg-green-50 p-6 text-center">
-          <h2 className="text-xl font-bold text-slate-800">レッスン完了</h2>
-          <p className="mt-2 text-slate-600">
+        <div className="rounded-xl border-2 border-pastel-primary bg-pastel-mint p-6 text-center">
+          <h2 className="text-xl font-bold text-pastel-ink">レッスン完了</h2>
+          <p className="mt-2 text-pastel-ink/80">
             {lessonTitle}
           </p>
-          <p className="mt-4 text-2xl font-bold text-primary">
+          <p className="mt-4 text-2xl font-bold text-pastel-primary-dark">
             {correctCount} / {total} 問正解
           </p>
         </div>
         <div className="flex justify-center gap-4">
-          <Link
-            href="/roadmap"
-            className="rounded-xl bg-primary px-6 py-3 font-semibold text-white shadow-md hover:bg-primary-dark transition"
-          >
-            ロードマップに戻る
-          </Link>
-          <Link
-            href="/"
-            className="rounded-xl border-2 border-slate-300 bg-white px-6 py-3 font-semibold text-slate-700 hover:bg-slate-50 transition"
-          >
-            ホーム
-          </Link>
+          <PushButton href="/roadmap">ロードマップに戻る</PushButton>
+          <PushButton href="/" variant="outline">ホーム</PushButton>
         </div>
       </div>
     );
   }
 
-  // 1問の表示
+  // 1問の表示（藍色背景で視認性向上）
   return (
-    <div className="space-y-6">
-      <p className="text-sm text-slate-500">
-        問題 {index + 1} / {questions.length}
-      </p>
-      <div className="rounded-xl border-2 border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-800 leading-relaxed">
+    <div className="min-h-[60vh] rounded-2xl bg-indigo-quiz p-4 sm:p-6 -mx-4 sm:-mx-0 space-y-6">
+      {showLightningOverlay && (
+        <LightningComboOverlay
+          key={displayCombo}
+          combo={displayCombo}
+          onComplete={() => setShowLightningOverlay(false)}
+          duration={1500}
+        />
+      )}
+      <div className="text-white">
+        <ProgressBar
+          current={results.filter(Boolean).length}
+          total={displayQuestions.length}
+          label="正解"
+          variant="quiz"
+          className="mb-1"
+          labelClassName="text-white"
+        />
+        <div className="flex items-center justify-end">
+          {displayCombo >= 1 && (
+            <div
+              className="flex items-center gap-1 rounded-full bg-amber-400/90 px-3 py-1 text-sm font-semibold text-indigo-quiz"
+              aria-label={`${displayCombo} 連続正解`}
+            >
+              <span aria-hidden>🔥</span>
+              <span>{displayCombo} コンボ</span>
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="rounded-xl border-2 border-pastel-border bg-white/98 p-6 shadow-lg">
+        <h2 className="text-lg font-semibold text-pastel-ink leading-relaxed">
           {current.text}
         </h2>
         <div className="mt-4 text-right">
@@ -137,26 +224,36 @@ export function QuizSession({ questions, lessonId, lessonTitle }: Props) {
           />
         </div>
         <ul className="mt-6 space-y-3">
-          {current.options.map((opt) => {
+          {current.options.map((opt, optionIndex) => {
             const chosen = selectedId === opt.id;
             const isRight = opt.id === current.correctOptionId;
-            let style = "border-slate-200 bg-slate-50 hover:border-slate-300";
-            if (showFeedback) {
-              if (isRight) style = "border-green-500 bg-green-50";
-              else if (chosen && !isRight) style = "border-red-400 bg-red-50";
-            } else if (chosen) {
-              style = "border-primary bg-green-50";
-            }
+            const optionVariant: "option" | "optionCorrect" | "optionWrong" =
+              showFeedback && isRight
+                ? "optionCorrect"
+                : showFeedback && chosen && !isRight
+                  ? "optionWrong"
+                  : "option";
+            const pastelClass = OPTION_PASTEL_CLASSES[optionIndex % OPTION_PASTEL_CLASSES.length];
+            const chosenOrFeedbackClass =
+              showFeedback && isRight
+                ? ""
+                : showFeedback && chosen && !isRight
+                  ? ""
+                : !showFeedback && chosen
+                  ? "!border-pastel-primary !bg-pastel-mint/80"
+                  : pastelClass;
+            const isWrongChosen = showFeedback && chosen && !isRight;
+            const isCorrectChosen = showFeedback && isRight;
             return (
               <li key={opt.id}>
-                <button
-                  type="button"
+                <PushButton
+                  variant={optionVariant}
                   onClick={() => handleSelect(opt.id)}
                   disabled={showFeedback}
-                  className={`w-full rounded-xl border-2 p-4 text-left font-medium text-slate-800 transition ${style} disabled:cursor-default`}
+                  className={`${chosenOrFeedbackClass} ${isWrongChosen ? "animate-feedback-shake" : ""} ${isCorrectChosen ? "animate-option-correct-pop" : ""}`}
                 >
                   {opt.text}
-                </button>
+                </PushButton>
               </li>
             );
           })}
@@ -167,23 +264,29 @@ export function QuizSession({ questions, lessonId, lessonTitle }: Props) {
         <div className="space-y-4">
           <div
             className={`rounded-xl border-2 p-4 ${
-              isCorrect ? "border-green-500 bg-green-50" : "border-red-400 bg-red-50"
+              isCorrect ? "border-pastel-success bg-pastel-mint animate-feedback-pop" : "border-pastel-error bg-pastel-rose"
             }`}
           >
-            <p className="font-semibold">
-              {isCorrect ? "正解です。" : `不正解。正解は「${correct?.text}」です。`}
+            <p className="font-semibold text-pastel-ink">
+              {isCorrect
+                ? `${correctMessage}${displayCombo >= 2 ? ` ${displayCombo} コンボ！` : ""}`
+                : `不正解。正解は「${correct?.text}」です。${displayCombo >= 1 ? " コンボが途切れました。" : ""}`}
             </p>
+            {isCorrect && (
+              <p className="mt-1 text-sm text-pastel-primary-dark">
+                +{getXPForCorrect(displayCombo)} XP
+                {displayCombo >= 2 && (
+                  <span className="ml-1 text-pastel-primary-dark/80">（コンボボーナス）</span>
+                )}
+              </p>
+            )}
             {current.explanation && (
-              <p className="mt-2 text-sm text-slate-600">{current.explanation}</p>
+              <p className="mt-2 text-sm text-pastel-ink/80">{current.explanation}</p>
             )}
           </div>
-          <button
-            type="button"
-            onClick={handleNext}
-            className="w-full rounded-xl bg-primary py-3 font-semibold text-white shadow-md hover:bg-primary-dark transition"
-          >
+          <PushButton type="button" onClick={handleNext} className="w-full">
             {isLast ? "結果を見る" : "次へ"}
-          </button>
+          </PushButton>
         </div>
       )}
     </div>

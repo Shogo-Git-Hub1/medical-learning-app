@@ -7,7 +7,7 @@ import {
   saveProgress,
   getToday,
   getDefaultProgress,
-  XP_PER_CORRECT,
+  getXPForCorrect,
   xpToLevel,
   xpToNextLevel,
 } from "@/lib/progress";
@@ -39,9 +39,9 @@ export function useProgress() {
     });
   }, []);
 
-  /** 1問解答したあと: XP・デイリー・ストリーク・復習スケジュールを更新 */
+  /** 1問解答したあと: XP（コンボボーナス込み）・デイリー・ストリーク・復習スケジュールを更新 */
   const recordAnswer = useCallback(
-    (questionId: string, correct: boolean) => {
+    (questionId: string, correct: boolean, combo: number = 1) => {
       ensureDailyReset();
       const today = getToday();
       setProgress((p) => {
@@ -69,13 +69,14 @@ export function useProgress() {
           const yesterdayStr = yesterday.toISOString().slice(0, 10);
           streak = lastDay === yesterdayStr ? p.streakDays + 1 : 1;
         }
+        const xpGain = correct ? getXPForCorrect(combo) : 0;
         const next: UserProgress = {
           ...p,
           lastStudyDate: today,
           streakDays: streak,
           dailyAnswered: p.dailyResetDate === today ? p.dailyAnswered + 1 : 1,
           dailyResetDate: p.dailyResetDate || today,
-          totalXP: correct ? p.totalXP + XP_PER_CORRECT : p.totalXP,
+          totalXP: p.totalXP + xpGain,
           questionReviews: {
             ...p.questionReviews,
             [questionId]: { nextReview, interval: nextInterval },

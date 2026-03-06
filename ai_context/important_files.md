@@ -22,6 +22,8 @@
 
 | ファイル | 役割 |
 |----------|------|
+| `docs/DESIGN.md` | **デザインガイド**（6色・Nunito/Roboto・押し込みボタン方針） |
+| `src/components/ui/PushButton.tsx` | 押し込み式ボタン（primary / outline / chip / option 等） |
 | `src/components/QuizSession.tsx` | クイズの出題・正誤判定・解説・結果表示UI |
 | `src/components/LessonView.tsx` | 間隔反復問題の混在ロジック + QuizSessionの起動 |
 | `src/components/HomeDashboard.tsx` | ホーム画面（ストリーク・ミッション・XPカード） |

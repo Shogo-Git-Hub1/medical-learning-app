@@ -61,5 +61,6 @@ export const physiologyLessons: Lesson[] = [
     examTag: "医師国家試験",
     order: 3,
     orderInSubject: 1,
+    level: 1,
   },
 ];

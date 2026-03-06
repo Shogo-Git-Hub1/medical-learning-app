@@ -70,8 +70,33 @@ export function getToday(): string {
   return d.toISOString().slice(0, 10);
 }
 
-/** 1問正解で得られる XP */
+/** 1問正解で得られる XP（コンボなし時） */
 export const XP_PER_CORRECT = 10;
+
+/**
+ * 連続正解コンボに応じた XP 倍率（Duolingo 風）
+ * 1 → 1x, 2 → 1.5x, 3 → 2x, 5+ → 2.5x
+ */
+const COMBO_MULTIPLIERS: Record<number, number> = {
+  1: 1,
+  2: 1.5,
+  3: 2,
+  4: 2,
+  5: 2.5,
+};
+const COMBO_MAX_TIER = 5;
+
+/** コンボ数から XP 倍率を返す（1以上の整数） */
+export function getComboMultiplier(combo: number): number {
+  if (combo <= 0) return 1;
+  return COMBO_MULTIPLIERS[Math.min(combo, COMBO_MAX_TIER)] ?? COMBO_MULTIPLIERS[COMBO_MAX_TIER];
+}
+
+/** 正解時の獲得 XP（コンボ倍率込み）。不正解は 0 なので correct 時のみ呼ぶ */
+export function getXPForCorrect(combo: number): number {
+  const mult = getComboMultiplier(combo);
+  return Math.round(XP_PER_CORRECT * mult);
+}
 
 /** レベル N に必要な累計 XP: 100 * (N-1) から 100*N - 1 までがレベル N */
 export function xpToLevel(totalXP: number): number {

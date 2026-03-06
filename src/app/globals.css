@@ -3,12 +3,26 @@
 @tailwind utilities;
 
 :root {
+  /* デザインガイドの6色 */
   --primary: #58cc02;
   --primary-dark: #46a302;
-  --streak: #ff9600;
-  --xp: #1cb0f6;
+  --yellow: #ffc800;
+  --pastel-pink: #ffb2b2;
+  --gray: #afafaf;
+  --pastel-blue: #bbf2ff;
+  --pastel-purple: #9069cd;
+  --pastel-ink: #3c3c3c;
+  --pastel-border: #afafaf;
 }
 
 body {
-  @apply bg-slate-50 text-slate-900 antialiased;
+  background-color: #ffffff;
+  color: var(--pastel-ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+
+h1, h2, h3, h4 {
+  font-family: var(--font-nunito), sans-serif;
+}
+
