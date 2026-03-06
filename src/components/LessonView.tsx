@@ -2,8 +2,8 @@
 
 import { useMemo } from "react";
 import { useProgress } from "@/hooks/useProgress";
-import { getQuestionsById } from "@/data/db";
-import type { Lesson, Question } from "@/lib/types";
+import { getQuestionsById } from "@/services/lessonService";
+import type { Lesson, Question } from "@/types";
 import { QuizSession } from "./QuizSession";
 
 type Props = {

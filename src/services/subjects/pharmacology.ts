@@ -1,4 +1,4 @@
-import type { Question, Lesson } from "@/lib/types";
+import type { Question, Lesson } from "@/types";
 
 /** 薬理学 — 難易度順に orderInSubject を 1, 2, 3... で並べる */
 export const pharmacologyQuestions: Question[] = [

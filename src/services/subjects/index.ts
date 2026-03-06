@@ -1,4 +1,4 @@
-import type { Question, Lesson } from "@/lib/types";
+import type { Question, Lesson } from "@/types";
 import { anatomyQuestions, anatomyLessons } from "./anatomy";
 import { physiologyQuestions, physiologyLessons } from "./physiology";
 import { pharmacologyQuestions, pharmacologyLessons } from "./pharmacology";

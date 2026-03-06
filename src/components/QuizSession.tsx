@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import type { Question } from "@/lib/types";
+import type { Question } from "@/types";
 import { useProgress } from "@/hooks/useProgress";
 
 function ReportQuestionLink({

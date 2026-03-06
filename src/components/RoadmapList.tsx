@@ -5,7 +5,7 @@ import { useProgress } from "@/hooks/useProgress";
 import {
   getLessonsGroupedBySubject,
   SUBJECT_DISPLAY_ORDER,
-} from "@/data/db";
+} from "@/services/lessonService";
 
 export function RoadmapList() {
   const { progress } = useProgress();

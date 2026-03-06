@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getLessonWithQuestions, getAllLessons } from "@/data/db";
+import { getLessonWithQuestions, getAllLessons } from "@/services/lessonService";
 import { LessonView } from "@/components/LessonView";
 
 export function generateStaticParams() {

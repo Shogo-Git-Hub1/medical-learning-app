@@ -8,7 +8,7 @@ import {
   getLessonsGroupedBySubject,
   getSubjectsInUse,
   getExamTagsInUse,
-} from "@/data/db";
+} from "@/services/lessonService";
 
 export function BrowseContent() {
   const { progress } = useProgress();

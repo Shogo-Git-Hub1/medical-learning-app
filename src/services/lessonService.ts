@@ -1,9 +1,9 @@
-import type { QuestionDatabase } from "@/lib/types";
+import type { QuestionDatabase } from "@/types";
 import { subjectQuestions, subjectLessons, SUBJECT_DISPLAY_ORDER } from "./subjects";
 
 /**
  * 構造化された問題データベース
- * 分野ごとに data/subjects/*.ts で管理し、ここで集約
+ * 分野ごとに services/subjects/*.ts で管理し、ここで集約
  */
 export const questionDb: QuestionDatabase = {
   questions: subjectQuestions,
