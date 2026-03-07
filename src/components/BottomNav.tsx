@@ -3,10 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+// Per-tab accent color — intentionally distinct to add visual interest
 const NAV_ITEMS = [
   {
     href: "/",
     label: "ホーム",
+    color: "#81C784",
+    border: "#2E7D32",
     icon: (active: boolean) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.5 : 1.8} strokeLinecap="round" strokeLinejoin="round">
         <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z" />
@@ -17,18 +20,22 @@ const NAV_ITEMS = [
   {
     href: "/subjects",
     label: "科目",
+    color: "#64B5F6",
+    border: "#1565C0",
     icon: (active: boolean) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.5 : 1.8} strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="3" width="7" height="7" rx="1" />
-        <rect x="14" y="3" width="7" height="7" rx="1" />
-        <rect x="3" y="14" width="7" height="7" rx="1" />
-        <rect x="14" y="14" width="7" height="7" rx="1" />
+        <rect x="3" y="3" width="7" height="7" rx="1.5" />
+        <rect x="14" y="3" width="7" height="7" rx="1.5" />
+        <rect x="3" y="14" width="7" height="7" rx="1.5" />
+        <rect x="14" y="14" width="7" height="7" rx="1.5" />
       </svg>
     ),
   },
   {
     href: "/roadmap",
     label: "マップ",
+    color: "#4DB6AC",
+    border: "#00695C",
     icon: (active: boolean) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.5 : 1.8} strokeLinecap="round" strokeLinejoin="round">
         <path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3V6z" />
@@ -39,6 +46,8 @@ const NAV_ITEMS = [
   {
     href: "/browse",
     label: "ブラウズ",
+    color: "#CE93D8",
+    border: "#7B1FA2",
     icon: (active: boolean) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.5 : 1.8} strokeLinecap="round" strokeLinejoin="round">
         <circle cx="11" cy="11" r="8" />
@@ -60,53 +69,52 @@ export function BottomNav() {
     <nav
       className="fixed bottom-0 left-0 right-0 z-20 md:hidden"
       style={{
-        background: "#0d1a0d",
-        boxShadow: "0 -4px 24px rgba(88,204,2,0.15), 0 -1px 0 rgba(88,204,2,0.25)",
+        background: "var(--neu-bg)",
+        boxShadow: "0 -1px 0 rgba(0,0,0,0.06), 0 -4px 16px rgba(0,0,0,0.07)",
       }}
       aria-label="メインナビゲーション"
     >
-      {/* トップグローライン */}
-      <div
-        className="absolute top-0 left-0 right-0 h-px pointer-events-none"
-        style={{
-          background: "linear-gradient(90deg, transparent, rgba(88,204,2,0.6) 30%, rgba(88,204,2,0.6) 70%, transparent)",
-        }}
-        aria-hidden
-      />
-
-      <ul className="flex items-stretch justify-around px-2 pb-safe">
-        {NAV_ITEMS.map(({ href, label, icon }) => {
+      <ul className="flex items-stretch justify-around px-1 pb-safe">
+        {NAV_ITEMS.map(({ href, label, color, border, icon }) => {
           const active = isActive(href);
           return (
             <li key={href} className="flex-1">
               <Link
                 href={href}
-                className="flex flex-col items-center justify-center gap-1 py-3 px-1 transition-all duration-200 relative"
+                className="relative flex flex-col items-center justify-center gap-1 py-2.5 px-1"
                 aria-current={active ? "page" : undefined}
               >
-                {/* アクティブ時の背景グロー */}
+                {/* Active pill background */}
                 {active && (
                   <span
-                    className="absolute inset-0 rounded-xl mx-1"
-                    style={{ background: "rgba(88,204,2,0.08)" }}
+                    className="absolute inset-x-1.5 top-1.5 bottom-1.5 rounded-2xl"
+                    style={{ background: `${color}22` }}
                     aria-hidden
                   />
                 )}
+
+                {/* Active top indicator bar */}
+                {active && (
+                  <span
+                    className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-1 rounded-b-full"
+                    style={{ background: color }}
+                    aria-hidden
+                  />
+                )}
+
                 <span
+                  className="relative transition-all duration-200"
                   style={{
-                    color: active ? "#58cc02" : "rgba(255,255,255,0.45)",
-                    filter: active ? "drop-shadow(0 0 6px rgba(88,204,2,0.7))" : "none",
-                    transition: "color 0.2s, filter 0.2s",
+                    color: active ? color : "rgba(0,0,0,0.3)",
+                    filter: active ? `drop-shadow(0 1px 4px ${color}88)` : "none",
+                    transform: active ? "translateY(-1px)" : "translateY(0)",
                   }}
                 >
                   {icon(active)}
                 </span>
                 <span
-                  className="text-[10px] font-medium font-mono tracking-wider"
-                  style={{
-                    color: active ? "#58cc02" : "rgba(255,255,255,0.35)",
-                    textShadow: active ? "0 0 8px rgba(88,204,2,0.6)" : "none",
-                  }}
+                  className="relative text-[10px] font-bold font-nunito transition-colors duration-200"
+                  style={{ color: active ? color : "rgba(0,0,0,0.3)" }}
                 >
                   {label}
                 </span>

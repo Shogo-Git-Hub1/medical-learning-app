@@ -144,6 +144,51 @@ export function getCharacterLine(
   return out;
 }
 
+// ─── セッションイントロ ────────────────────────────────────────────────
+
+/** レベルを難易度ラベルに変換 */
+function getDifficultyLabel(level: number): string {
+  if (level <= 3) return "入門";
+  if (level <= 7) return "基礎";
+  if (level <= 12) return "応用";
+  return "発展";
+}
+
+const SESSION_INTRO_LINES: Record<CharacterId, string[]> = {
+  skurun: [
+    "「{lessonTitle}」だよ！全{count}問、{difficulty}レベル。一緒に頑張ろ！",
+    "今回は{count}問！「{lessonTitle}」、{difficulty}レベルだよ〜。やってこー！",
+    "「{lessonTitle}」、{count}問ね！{difficulty}…ぼく少し得意かも？",
+  ],
+  regi: [
+    "「{lessonTitle}」だ。全{count}問、{difficulty}レベル。整理しながら進めよう。",
+    "今回は「{lessonTitle}」、{count}問。{difficulty}レベル、集中しろ。",
+    "「{lessonTitle}」全{count}問。{difficulty}レベル——落ち着いて考えれば解ける。",
+  ],
+  shirin: [
+    "「{lessonTitle}」！全{count}問、{difficulty}レベルだよ！ついてきて！",
+    "よし！{count}問やるよ！「{lessonTitle}」、{difficulty}レベル、本気でね！",
+    "「{lessonTitle}」スタート！{count}問、{difficulty}レベル——テストにも出るよ！",
+  ],
+};
+
+/**
+ * セッション開始前のイントロ台詞（キャラ・レッスン名・レベル・問題数を受け取り1文返す）
+ */
+export function getSessionIntroLine(
+  characterId: CharacterId,
+  lessonTitle: string,
+  level: number,
+  questionsCount: number
+): string {
+  const lines = SESSION_INTRO_LINES[characterId];
+  const raw = lines[Math.floor(Math.random() * lines.length)];
+  return raw
+    .replace(/\{lessonTitle\}/g, lessonTitle)
+    .replace(/\{difficulty\}/g, getDifficultyLabel(level))
+    .replace(/\{count\}/g, String(questionsCount));
+}
+
 /**
  * 正解時メッセージ（スカルン・複数から1つ）。既存 QuizSession の CORRECT_MESSAGES と同等
  */

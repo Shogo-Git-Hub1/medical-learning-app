@@ -151,6 +151,11 @@ const config: Config = {
           "0%": { transform: "translateX(-100%)", opacity: "0.6" },
           "100%": { transform: "translateX(300%)", opacity: "0" },
         },
+        /** ロード中…のドット点滅 */
+        "dot-blink": {
+          "0%, 70%, 100%": { opacity: "0" },
+          "35%": { opacity: "1" },
+        },
       },
       animation: {
         "feedback-pop": "feedback-pop 0.4s ease-out forwards",
@@ -169,6 +174,7 @@ const config: Config = {
         "card-enter": "card-enter 0.45s cubic-bezier(0.22,1,0.36,1) forwards",
         "pulse-glow": "pulse-glow 2.8s ease-in-out infinite",
         "scan-h": "scan-h 3.5s linear infinite",
+        "dot-blink": "dot-blink 1.4s ease-in-out infinite",
       },
     },
   },

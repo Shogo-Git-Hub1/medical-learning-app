@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import type { CharacterId, CharacterLineKey } from "@/types/characters";
 import { getCharacterLine, CHARACTER_PROFILES } from "@/data/characters";
 import { CharacterAvatar, type CharacterAnimation } from "@/components/CharacterAvatar";
@@ -69,9 +70,13 @@ export function CharacterLine({
   className = "",
 }: Props) {
   const profile = CHARACTER_PROFILES[characterId];
-  const line = getCharacterLine(lineKey, characterId, replacements);
+  const [line, setLine] = useState<string>("");
   const avatarAnimation =
     animation ?? getDefaultAnimation(variant, characterId, lineKey);
+
+  useEffect(() => {
+    setLine(getCharacterLine(lineKey, characterId, replacements));
+  }, [lineKey, characterId, replacements]);
 
   if (!line) return null;
 

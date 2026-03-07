@@ -64,6 +64,37 @@ export function saveProgress(progress: UserProgress): void {
   }
 }
 
+export type LastLessonResult = { lessonId: string; accuracy: number };
+
+const LAST_LESSON_RESULT_KEY = "medical-learning-last-lesson-result";
+
+export function getLastLessonResult(): LastLessonResult | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(LAST_LESSON_RESULT_KEY);
+    return raw ? (JSON.parse(raw) as LastLessonResult) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setLastLessonResult(lessonId: string, accuracy: number): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(LAST_LESSON_RESULT_KEY, JSON.stringify({ lessonId, accuracy }));
+}
+
+const LAST_SUBJECT_KEY = "medical-learning-last-subject";
+
+export function getLastSubject(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(LAST_SUBJECT_KEY);
+}
+
+export function setLastSubject(subject: string): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(LAST_SUBJECT_KEY, subject);
+}
+
 /** 今日の日付 YYYY-MM-DD（ローカル） */
 export function getToday(): string {
   const d = new Date();

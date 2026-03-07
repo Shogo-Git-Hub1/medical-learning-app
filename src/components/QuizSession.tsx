@@ -4,14 +4,18 @@ import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import type { Question } from "@/types";
 import { useProgress } from "@/hooks/useProgress";
-import { getXPForCorrect } from "@/lib/progress";
+import { getXPForCorrect, setLastLessonResult } from "@/lib/progress";
 import { shuffle } from "@/lib/utils";
 import { PushButton } from "@/components/ui/PushButton";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { LightningComboOverlay } from "@/components/LightningComboOverlay";
 import { CharacterLine } from "@/components/CharacterLine";
+import { CharacterAvatar } from "@/components/CharacterAvatar";
 import { ConfettiEffect } from "@/components/ConfettiEffect";
 import { playCorrect, playWrong, playComplete } from "@/lib/sounds";
+import { getSessionIntroLine, CHARACTER_PROFILES } from "@/data/characters";
+import type { CharacterId } from "@/types/characters";
+import { getLessonsGroupedBySubject, SUBJECT_DISPLAY_ORDER } from "@/services/lessonService";
 
 /** 選択肢ごとのアクセントカラー（Duolingo 6色パレット準拠） */
 const OPTION_ACCENTS = [
@@ -49,14 +53,60 @@ function ReportQuestionLink({
   );
 }
 
+const ALL_CHARACTER_IDS: CharacterId[] = ["skurun", "regi", "shirin"];
+
+function LoadingDots() {
+  return (
+    <span aria-hidden>
+      {[0, 0.25, 0.5].map((delay, i) => (
+        <span
+          key={i}
+          className="inline-block animate-dot-blink"
+          style={{ animationDelay: `${delay}s` }}
+        >
+          .
+        </span>
+      ))}
+    </span>
+  );
+}
+
 type Props = {
   questions: Question[];
   lessonId: string;
   lessonTitle: string;
+  lessonLevel?: number;
 };
 
-export function QuizSession({ questions, lessonId, lessonTitle }: Props) {
+export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1 }: Props) {
   const { recordAnswer, completeLesson } = useProgress();
+
+  // セッションイントロ（マウント時にランダムキャラ・台詞を固定）
+  const introCharacter = useMemo(
+    () => ALL_CHARACTER_IDS[Math.floor(Math.random() * ALL_CHARACTER_IDS.length)],
+    [] // eslint-disable-line react-hooks/exhaustive-deps
+  );
+  const introLine = useMemo(
+    () => getSessionIntroLine(introCharacter, lessonTitle, lessonLevel, questions.length),
+    [introCharacter, lessonTitle, lessonLevel, questions.length]
+  );
+  const [showIntro, setShowIntro] = useState(true);
+  const [introFading, setIntroFading] = useState(false);
+
+  const skipIntro = () => {
+    setIntroFading(true);
+    setTimeout(() => setShowIntro(false), 300);
+  };
+
+  useEffect(() => {
+    const fadeTimer = setTimeout(() => setIntroFading(true), 3200);
+    const hideTimer = setTimeout(() => setShowIntro(false), 3500);
+    return () => {
+      clearTimeout(fadeTimer);
+      clearTimeout(hideTimer);
+    };
+  }, []);
+
   const [index, setIndex] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
@@ -113,6 +163,9 @@ export function QuizSession({ questions, lessonId, lessonTitle }: Props) {
 
   const handleNext = () => {
     if (isLast) {
+      const correctCount = results.filter(Boolean).length + (isCorrect ? 1 : 0);
+      const accuracy = displayQuestions.length > 0 ? correctCount / displayQuestions.length : 0;
+      setLastLessonResult(lessonId, accuracy);
       completeLesson(lessonId);
       setShowCompleted(true);
       setShowConfetti(true);
@@ -123,6 +176,75 @@ export function QuizSession({ questions, lessonId, lessonTitle }: Props) {
       setShowFeedback(false);
     }
   };
+
+  // ─── セッションイントロ画面 ──────────────────────────────────────────
+  if (showIntro) {
+    const profile = CHARACTER_PROFILES[introCharacter];
+    return (
+      <div
+        className="flex flex-col min-h-[55vh] animate-fade-in-up cursor-pointer"
+        onClick={skipIntro}
+        style={{ opacity: introFading ? 0 : 1, transition: "opacity 0.3s ease" }}
+        aria-label="タップでスキップ"
+      >
+        {/* キャラクター吹き出しエリア */}
+        <div className="flex-1 flex items-center justify-center px-2 py-6">
+          <div
+            className="w-full rounded-2xl p-4 flex items-start gap-3 relative overflow-hidden"
+            style={{
+              background: "var(--neu-bg)",
+              boxShadow: "var(--neu-shadow-md)",
+            }}
+            role="group"
+            aria-label={`${profile.name}: ${introLine}`}
+          >
+            <div
+              className="absolute top-0 left-4 right-4 h-0.5 rounded-b-full"
+              style={{
+                background: "linear-gradient(90deg, transparent, rgba(88,204,2,0.5), transparent)",
+              }}
+              aria-hidden
+            />
+            <div
+              className="flex-shrink-0 rounded-full p-0.5"
+              style={{
+                background: "var(--neu-bg)",
+                boxShadow: "var(--neu-shadow-sm)",
+              }}
+            >
+              <CharacterAvatar
+                characterId={introCharacter}
+                size="lg"
+                animation="idle"
+              />
+            </div>
+            <div className="flex-1 min-w-0 pt-1">
+              <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-pastel-ink/40">
+                {profile.name}
+              </p>
+              <p className="mt-1.5 text-sm text-pastel-ink leading-relaxed">{introLine}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* ロード中… + スキップ */}
+        <div className="flex flex-col items-center pb-10 gap-3">
+          <p className="text-xs font-mono text-pastel-ink/35 tracking-widest">
+            ロード中<LoadingDots />
+          </p>
+          <div
+            className="rounded-full px-4 py-1.5"
+            style={{
+              background: "var(--neu-bg)",
+              boxShadow: "var(--neu-shadow-sm)",
+            }}
+          >
+            <p className="text-[11px] font-mono text-pastel-ink/50 tracking-wide">タップでスキップ</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (displayQuestions.length === 0) {
     return (
@@ -141,6 +263,20 @@ export function QuizSession({ questions, lessonId, lessonTitle }: Props) {
     const total = displayQuestions.length;
     const isGoodScore = total > 0 && correctCount >= total * 0.8;
     const pct = total > 0 ? Math.round((correctCount / total) * 100) : 0;
+
+    // 次のレッスンを検索（review セッションでは対象外）
+    const grouped = getLessonsGroupedBySubject();
+    let nextLesson: { id: string; title: string } | null = null;
+    if (lessonId !== "review") {
+      for (const subj of SUBJECT_DISPLAY_ORDER) {
+        const subs = grouped[subj] ?? [];
+        const idx = subs.findIndex((l) => l.id === lessonId);
+        if (idx !== -1 && idx < subs.length - 1) {
+          nextLesson = subs[idx + 1];
+          break;
+        }
+      }
+    }
 
     return (
       <div className="space-y-6 animate-fade-in-up">
@@ -193,13 +329,27 @@ export function QuizSession({ questions, lessonId, lessonTitle }: Props) {
           size="sm"
         />
 
-        <div className="flex gap-3">
-          <PushButton href="/roadmap" className="flex-1">
-            ロードマップへ
-          </PushButton>
-          <PushButton href="/" variant="outline" className="flex-1">
-            ホーム
-          </PushButton>
+        <div className="space-y-3">
+          {/* Primary CTA: 次のレッスン or もう一度挑戦 */}
+          {isGoodScore && nextLesson ? (
+            <PushButton href={`/lesson/${nextLesson.id}?from=/roadmap`} className="w-full">
+              次のレッスンへ →
+            </PushButton>
+          ) : !isGoodScore && lessonId !== "review" ? (
+            <PushButton href={`/lesson/${lessonId}?from=/roadmap`} className="w-full">
+              もう一度挑戦 →
+            </PushButton>
+          ) : null}
+
+          {/* Secondary CTAs */}
+          <div className="flex gap-3">
+            <PushButton href="/roadmap" variant="outline" className="flex-1">
+              ロードマップへ
+            </PushButton>
+            <PushButton href="/" variant="outline" className="flex-1">
+              ホーム
+            </PushButton>
+          </div>
         </div>
       </div>
     );

@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import { useProgress } from "@/hooks/useProgress";
 import { getQuestionsById } from "@/services/lessonService";
 import { shuffle } from "@/lib/utils";
+import { setLastSubject } from "@/lib/progress";
 import type { Lesson, Question } from "@/types";
 import { QuizSession } from "./QuizSession";
 
@@ -15,6 +16,10 @@ type Props = {
 /** レッスン問題の先頭に今日復習すべき問題を混ぜ、問題順をランダムにする */
 export function LessonView({ lesson, questions }: Props) {
   const { getDueReviewQuestionIds } = useProgress();
+
+  useEffect(() => {
+    if (lesson.subject) setLastSubject(lesson.subject);
+  }, [lesson.subject]);
 
   const shuffledQuestions = useMemo(() => {
     const dueIds = getDueReviewQuestionIds();
@@ -34,6 +39,7 @@ export function LessonView({ lesson, questions }: Props) {
       questions={shuffledQuestions}
       lessonId={lesson.id}
       lessonTitle={lesson.title}
+      lessonLevel={lesson.level}
     />
   );
 }

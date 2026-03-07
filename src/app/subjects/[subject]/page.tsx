@@ -1,5 +1,4 @@
-import Link from "next/link";
-import { SubjectLessons } from "@/components/SubjectLessons";
+import { SubjectRoadmap } from "@/components/SubjectRoadmap";
 import { SUBJECT_DISPLAY_ORDER } from "@/services/lessonService";
 
 export function generateStaticParams() {
@@ -15,19 +14,5 @@ export default async function SubjectPage({
 }) {
   const { subject } = await params;
   const decoded = decodeURIComponent(subject);
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Link
-          href="/subjects"
-          className="rounded-lg bg-pastel-slate text-pastel-ink px-3 py-1.5 text-sm font-medium hover:bg-pastel-border/60 transition"
-        >
-          ← 科目一覧
-        </Link>
-        <h1 className="text-xl font-bold text-pastel-ink">{decoded}</h1>
-      </div>
-      <SubjectLessons subject={decoded} />
-    </div>
-  );
+  return <SubjectRoadmap subject={decoded} />;
 }

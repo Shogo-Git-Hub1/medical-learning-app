@@ -15,6 +15,7 @@ export function BrowseContent() {
   const { progress } = useProgress();
   const [subject, setSubject] = useState<string | null>(null);
   const [examTag, setExamTag] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const subjects = useMemo(() => getSubjectsInUse(), []);
   const examTags = useMemo(() => getExamTagsInUse(), []);
@@ -22,6 +23,12 @@ export function BrowseContent() {
     () => getLessonsFiltered(subject, examTag),
     [subject, examTag]
   );
+
+  const filteredLessons = useMemo(() => {
+    if (!searchQuery.trim()) return lessons;
+    const q = searchQuery.trim().toLowerCase();
+    return lessons.filter((l) => l.title.toLowerCase().includes(q));
+  }, [lessons, searchQuery]);
 
   const groupedBySubject = useMemo(() => getLessonsGroupedBySubject(), []);
 
@@ -36,6 +43,45 @@ export function BrowseContent() {
 
   return (
     <div className="space-y-6">
+      {/* ─── 検索バー ─────────────────────────────────────── */}
+      <div
+        className="relative animate-fade-in-up"
+        style={{ animationFillMode: "both" }}
+      >
+        <div
+          className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none"
+          style={{ color: "rgba(0,0,0,0.25)" }}
+          aria-hidden
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="8" />
+            <path d="M21 21l-4.35-4.35" />
+          </svg>
+        </div>
+        <input
+          type="text"
+          placeholder="レッスンを検索..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full pl-10 pr-10 py-3.5 rounded-2xl text-sm font-medium text-pastel-ink placeholder:text-pastel-ink/30 focus:outline-none"
+          style={{
+            background: "var(--neu-bg)",
+            boxShadow: "var(--neu-inset)",
+          }}
+        />
+        {searchQuery && (
+          <button
+            type="button"
+            onClick={() => setSearchQuery("")}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-lg leading-none transition-colors"
+            style={{ color: "rgba(0,0,0,0.25)" }}
+            aria-label="検索をクリア"
+          >
+            ×
+          </button>
+        )}
+      </div>
+
       {/* ─── 科目フィルター ────────────────────────────────── */}
       <div
         className="neu-card rounded-2xl p-4 relative overflow-hidden animate-fade-in-up"
@@ -105,16 +151,16 @@ export function BrowseContent() {
       >
         <p className="text-[10px] font-mono text-pastel-ink/40 uppercase tracking-widest mb-3">
           // レッスン{" "}
-          <span className="text-pastel-primary">({lessons.length}件)</span>
+          <span className="text-pastel-primary">({filteredLessons.length}件)</span>
         </p>
 
-        {lessons.length === 0 ? (
+        {filteredLessons.length === 0 ? (
           <div className="neu-inset rounded-2xl p-8 text-center">
             <p className="font-mono text-sm text-pastel-ink/45">// 該当するレッスンがありません</p>
           </div>
         ) : (
           <ul className="space-y-3">
-            {lessons.map((lesson, i) => {
+            {filteredLessons.map((lesson, i) => {
               const unlocked = isUnlocked(lesson.id, lesson.subject);
               const done = progress.completedLessonIds.includes(lesson.id);
               const meta = [lesson.subject, lesson.examTag].filter(Boolean).join(" · ");

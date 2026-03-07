@@ -53,45 +53,38 @@ export default function RootLayout({
     <html lang="ja" className={`${nunito.variable} ${roboto.variable}`}>
       <body className="min-h-screen flex flex-col font-roboto antialiased">
         <header
-          className="sticky top-0 z-10 bg-[#0d1a0d] overflow-hidden"
-          style={{ boxShadow: "0 4px 24px rgba(88,204,2,0.18), 0 1px 0 rgba(88,204,2,0.3)" }}
+          className="sticky top-0 z-10"
+          style={{
+            background: "linear-gradient(135deg, #dbeeff 0%, #c8e0ff 100%)",
+            boxShadow: "0 4px 12px rgba(99,140,255,0.18), 0 1px 0 rgba(255,255,255,0.9), inset 0 1px 0 rgba(255,255,255,0.85)",
+          }}
         >
-          {/* スキャンライン */}
-          <div
-            className="absolute top-0 left-0 h-full w-1/3 bg-gradient-to-r from-transparent via-[#58cc02]/18 to-transparent pointer-events-none animate-scan-h"
-            aria-hidden
-          />
-          <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between relative">
-            <div className="flex items-center gap-2">
-              <span
-                className="text-[#58cc02] font-bold text-xl font-nunito tracking-wide"
-                style={{ textShadow: "0 0 10px rgba(88,204,2,0.85), 0 0 22px rgba(88,204,2,0.4)" }}
-              >
-                医療学習
-              </span>
-              <span className="hidden sm:block text-[#58cc02]/35 text-[10px] font-mono tracking-widest select-none">
-                // MED.SYS
-              </span>
-            </div>
+          <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
+            <span
+              className="text-[#2563eb] font-bold text-xl font-nunito tracking-wide"
+              style={{ textShadow: "0 1px 0 rgba(255,255,255,0.8), 0 2px 8px rgba(37,99,235,0.2)" }}
+            >
+              医療学習
+            </span>
             {/* デスクトップのみ表示するナビ */}
             <nav className="hidden md:flex gap-0.5">
               {NAV_LINKS.map(({ href, label }) => (
                 <Link
                   key={href}
                   href={href}
-                  className="text-white/55 hover:text-[#58cc02] text-sm font-medium px-3 py-1.5 rounded-lg transition-all duration-200 hover:bg-[#58cc02]/10 border border-transparent hover:border-[#58cc02]/30"
+                  className="text-[#3b5bdb]/70 hover:text-[#2563eb] text-sm font-medium px-3 py-1.5 rounded-lg transition-all duration-200 hover:bg-[#2563eb]/10 border border-transparent hover:border-[#2563eb]/25"
                 >
                   {label}
                 </Link>
               ))}
             </nav>
           </div>
-          {/* 底辺グローライン */}
+          {/* 底辺ライン */}
           <div
-            className="absolute bottom-0 left-0 right-0 h-px pointer-events-none"
+            className="h-px"
             style={{
               background:
-                "linear-gradient(90deg, transparent, rgba(88,204,2,0.65) 30%, rgba(88,204,2,0.65) 70%, transparent)",
+                "linear-gradient(90deg, transparent, rgba(99,140,255,0.5) 30%, rgba(99,140,255,0.5) 70%, transparent)",
             }}
             aria-hidden
           />

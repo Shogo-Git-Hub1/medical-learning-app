@@ -15,7 +15,7 @@
 | 項目 | 採用技術 |
 |------|----------|
 | **フレームワーク** | Next.js 15 (App Router) + TypeScript |
-| **スタイル** | Tailwind CSS（Duolingo 風の緑基調 UI） |
+| **スタイル** | Tailwind CSS（語学学習アプリDuolingo風のUI） |
 | **進捗の永続化** | localStorage（将来は Supabase / Firebase 等に差し替え可能） |
 | **配布** | Web（静的エクスポート）、PWA、Capacitor による iOS ビルド |
 

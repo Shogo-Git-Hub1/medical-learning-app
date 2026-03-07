@@ -1,153 +1,204 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useProgress } from "@/hooks/useProgress";
+import { getLessonsGroupedBySubject, SUBJECT_DISPLAY_ORDER } from "@/services/lessonService";
 import {
-  getLessonsGroupedBySubject,
-  SUBJECT_DISPLAY_ORDER,
-  ROADMAP_LEVELS,
-} from "@/services/lessonService";
-import { ProgressBar } from "@/components/ui/ProgressBar";
-import { CharacterLine } from "@/components/CharacterLine";
+  SUBJECT_THEMES,
+  DEFAULT_THEME,
+  NODE_HEIGHT,
+  BOTTOM_PAD,
+  SubjectNodes,
+  LessonPreviewSheet,
+  type PreviewData,
+} from "@/components/RoadmapPrimitives";
 import type { Lesson } from "@/types";
 
+// ─── SubjectSection ────────────────────────────────────────────────────────────
+interface SubjectSectionProps {
+  subject: string;
+  lessons: Lesson[];
+  completedIds: string[];
+  subjectIndex: number;
+  isCollapsed: boolean;
+  onToggle: () => void;
+  onNodeTap: (data: PreviewData) => void;
+}
+
+function SubjectSection({
+  subject,
+  lessons,
+  completedIds,
+  subjectIndex,
+  isCollapsed,
+  onToggle,
+  onNodeTap,
+}: SubjectSectionProps) {
+  const theme          = SUBJECT_THEMES[subject] ?? DEFAULT_THEME;
+  const completedCount = lessons.filter((l) => completedIds.includes(l.id)).length;
+  const isDone         = lessons.length > 0 && completedCount === lessons.length;
+  const subjectHref    = `/subjects/${encodeURIComponent(subject)}`;
+
+  // Used for the max-height collapse animation
+  const expandedH = lessons.length * NODE_HEIGHT + BOTTOM_PAD;
+
+  return (
+    <section
+      className="animate-fade-in-up"
+      style={{ animationDelay: `${subjectIndex * 70}ms`, animationFillMode: "both" }}
+    >
+      {/* ── Header banner ─────────────────────────────────────────────── */}
+      <div
+        className="flex items-stretch rounded-2xl mb-2 overflow-hidden"
+        style={{
+          background: `linear-gradient(135deg, ${theme.grad0}, ${theme.grad1})`,
+          boxShadow: `0 4px 16px ${theme.main}44`,
+        }}
+      >
+        {/* Left: Link to full subject roadmap */}
+        <Link
+          href={subjectHref}
+          className="flex-1 flex items-center gap-2 p-4 pr-2 min-w-0 transition-opacity duration-150 active:opacity-75"
+          aria-label={`${subject} の詳細ロードマップを開く`}
+        >
+          {/* Decorative circles (pointer-events-none so they don't intercept touch) */}
+          <div className="absolute -right-8 -top-8 w-28 h-28 rounded-full bg-white/10 pointer-events-none" aria-hidden />
+
+          <span className="text-2xl select-none drop-shadow-sm shrink-0" aria-hidden>{theme.icon}</span>
+          <h2 className="text-white font-bold text-base font-nunito drop-shadow-sm truncate">
+            {subject}
+          </h2>
+          {isDone && (
+            <span className="shrink-0 text-white text-xs font-bold bg-white/25 px-2 py-0.5 rounded-full">
+              完了 ✓
+            </span>
+          )}
+        </Link>
+
+        {/* Right: progress count + collapse toggle */}
+        <button
+          type="button"
+          onClick={onToggle}
+          className="flex items-center gap-1.5 px-4 shrink-0 transition-opacity duration-150 active:opacity-75"
+          aria-expanded={!isCollapsed}
+          aria-label={isCollapsed ? `${subject} を展開` : `${subject} を折りたたむ`}
+        >
+          <span className="text-white/90 text-sm font-bold">
+            {completedCount}/{lessons.length}
+          </span>
+          {/* Chevron — points down when expanded, right when collapsed */}
+          <svg
+            viewBox="0 0 24 24"
+            width={16}
+            height={16}
+            fill="none"
+            stroke="white"
+            strokeWidth={2.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="transition-transform duration-300"
+            style={{ transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)", opacity: 0.8 }}
+            aria-hidden
+          >
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </button>
+
+        {/* Progress bar — sits at the bottom of the banner */}
+        <div
+          className="absolute bottom-0 left-0 right-0 h-1.5 bg-white/20 overflow-hidden rounded-b-2xl pointer-events-none"
+          aria-hidden
+        >
+          <div
+            className="h-full bg-white/70 rounded-b-2xl transition-all duration-700 ease-out"
+            style={{ width: `${lessons.length > 0 ? (completedCount / lessons.length) * 100 : 0}%` }}
+          />
+        </div>
+      </div>
+
+      {/* ── Collapsible nodes section ──────────────────────────────────── */}
+      <div
+        className="overflow-hidden transition-all duration-400 ease-in-out"
+        style={{
+          maxHeight: isCollapsed ? 0 : expandedH,
+          opacity: isCollapsed ? 0 : 1,
+          pointerEvents: isCollapsed ? "none" : "auto",
+          // Slightly longer transition for expanding than collapsing
+          transitionDuration: isCollapsed ? "280ms" : "380ms",
+        }}
+        aria-hidden={isCollapsed}
+      >
+        <SubjectNodes
+          lessons={lessons}
+          completedIds={completedIds}
+          theme={theme}
+          onNodeTap={onNodeTap}
+        />
+      </div>
+    </section>
+  );
+}
+
+// ─── RoadmapList ───────────────────────────────────────────────────────────────
 export function RoadmapList() {
   const { progress } = useProgress();
   const grouped = getLessonsGroupedBySubject();
 
+  const [preview, setPreview] = useState<PreviewData | null>(null);
+
+  // Collapsed state: Set of subject names that are currently collapsed.
+  // Initialized once after the first real progress data arrives.
+  const [collapsedSubjects, setCollapsedSubjects] = useState<Set<string>>(new Set());
+  const initialized = useRef(false);
+
+  useEffect(() => {
+    if (initialized.current) return;
+    if (progress.completedLessonIds.length === 0) return; // wait until progress is loaded
+
+    initialized.current = true;
+    const initCollapsed = new Set<string>();
+
+    for (const subject of SUBJECT_DISPLAY_ORDER) {
+      const lessons = grouped[subject] ?? [];
+      if (lessons.length > 0 && lessons.every((l) => progress.completedLessonIds.includes(l.id))) {
+        initCollapsed.add(subject);
+      }
+    }
+    setCollapsedSubjects(initCollapsed);
+  }, [progress.completedLessonIds, grouped]);
+
+  const toggleSubject = (subject: string) => {
+    setCollapsedSubjects((prev) => {
+      const next = new Set(prev);
+      if (next.has(subject)) next.delete(subject);
+      else next.add(subject);
+      return next;
+    });
+  };
+
   return (
-    <div className="space-y-8">
-      <CharacterLine
-        characterId="shirin"
-        lineKey="roadmapHint"
-        size="sm"
-        className="mb-2"
-      />
-      {SUBJECT_DISPLAY_ORDER.map((subject, si) => {
-        const lessons = grouped[subject];
-        if (!lessons || lessons.length === 0) return null;
+    <>
+      <div className="space-y-4">
+        {SUBJECT_DISPLAY_ORDER.map((subject, si) => {
+          const lessons = grouped[subject];
+          if (!lessons || lessons.length === 0) return null;
+          return (
+            <SubjectSection
+              key={subject}
+              subject={subject}
+              lessons={lessons}
+              completedIds={progress.completedLessonIds}
+              subjectIndex={si}
+              isCollapsed={collapsedSubjects.has(subject)}
+              onToggle={() => toggleSubject(subject)}
+              onNodeTap={setPreview}
+            />
+          );
+        })}
+      </div>
 
-        const completedInSubject = lessons.filter((l) =>
-          progress.completedLessonIds.includes(l.id)
-        ).length;
-        const totalInSubject = lessons.length;
-
-        const lessonsByLevel = ROADMAP_LEVELS.reduce(
-          (acc, level) => {
-            acc[level] = lessons.filter((l) => l.level === level);
-            return acc;
-          },
-          {} as Record<number, Lesson[]>
-        );
-
-        return (
-          <section
-            key={subject}
-            className="animate-fade-in-up"
-            style={{ animationDelay: `${si * 60}ms`, animationFillMode: "both" }}
-          >
-            <div className="neu-card rounded-2xl p-5 mb-4 relative overflow-hidden">
-              {/* アクセントライン */}
-              <div
-                className="absolute top-0 left-6 right-6 h-0.5 rounded-b-full opacity-60"
-                style={{ background: "linear-gradient(90deg, transparent, #58cc02, transparent)" }}
-                aria-hidden
-              />
-              <div className="flex items-center gap-2 mb-3">
-                <span className="w-1.5 h-6 rounded-full bg-pastel-primary" aria-hidden
-                  style={{ boxShadow: "0 0 8px rgba(88,204,2,0.6)" }}
-                />
-                <h2 className="text-base font-bold text-pastel-ink font-nunito">{subject}</h2>
-              </div>
-              <ProgressBar
-                current={completedInSubject}
-                total={totalInSubject}
-                label="レッスン"
-                variant="roadmap"
-              />
-            </div>
-
-            <div className="space-y-5 pl-2">
-              {ROADMAP_LEVELS.map((level) => {
-                const levelLessons = lessonsByLevel[level];
-                const hasLessons = levelLessons && levelLessons.length > 0;
-
-                return (
-                  <div key={level} className="space-y-2">
-                    <h3 className="text-xs font-bold text-pastel-ink/50 font-mono uppercase tracking-widest flex items-center gap-2">
-                      <span
-                        className="inline-flex items-center justify-center w-6 h-6 rounded-lg text-[10px] font-bold text-pastel-primary"
-                        style={{ boxShadow: "var(--neu-shadow-sm)" }}
-                        aria-hidden
-                      >
-                        {level}
-                      </span>
-                      LV.{level}
-                    </h3>
-                    <ul className="space-y-2 pl-1">
-                      {hasLessons ? (
-                        levelLessons.map((lesson) => {
-                          const allInSubject = lessons;
-                          const prevLessons = allInSubject.filter(
-                            (l) =>
-                              l.level < lesson.level ||
-                              (l.level === lesson.level &&
-                                (l.orderInSubject ?? 0) < (lesson.orderInSubject ?? 0))
-                          );
-                          const prevDone =
-                            prevLessons.length === 0 ||
-                            prevLessons.every((l) =>
-                              progress.completedLessonIds.includes(l.id)
-                            );
-                          const done = progress.completedLessonIds.includes(lesson.id);
-                          const locked = !prevDone;
-
-                          return (
-                            <li key={lesson.id}>
-                              {locked ? (
-                                <div className="neu-inset rounded-xl p-3 flex items-center justify-between opacity-50">
-                                  <span className="font-semibold text-sm text-pastel-ink">{lesson.title}</span>
-                                  <span className="text-xs">🔒</span>
-                                </div>
-                              ) : (
-                                <Link
-                                  href={`/lesson/${lesson.id}?from=/roadmap`}
-                                  className="neu-card-sm rounded-xl p-3 flex items-center justify-between transition-all duration-200 active:scale-[0.98] relative overflow-hidden group block"
-                                >
-                                  <div
-                                    className="absolute top-0 left-3 right-3 h-0.5 rounded-b-full opacity-0 group-hover:opacity-70 transition-opacity"
-                                    style={{ background: "linear-gradient(90deg, transparent, #58cc02, transparent)" }}
-                                    aria-hidden
-                                  />
-                                  <span className="font-semibold text-sm text-pastel-ink">{lesson.title}</span>
-                                  {done ? (
-                                    <span
-                                      className="text-pastel-primary font-bold"
-                                      style={{ textShadow: "0 0 8px rgba(88,204,2,0.6)" }}
-                                    >
-                                      ✓
-                                    </span>
-                                  ) : (
-                                    <span className="text-pastel-primary/50 group-hover:text-pastel-primary transition-colors">›</span>
-                                  )}
-                                </Link>
-                              )}
-                            </li>
-                          );
-                        })
-                      ) : (
-                        <li className="neu-inset rounded-xl px-4 py-3">
-                          <span className="text-xs font-mono text-pastel-ink/40">// 準備中</span>
-                        </li>
-                      )}
-                    </ul>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-        );
-      })}
-    </div>
+      <LessonPreviewSheet preview={preview} onClose={() => setPreview(null)} />
+    </>
   );
 }
