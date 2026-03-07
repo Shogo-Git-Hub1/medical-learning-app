@@ -102,7 +102,7 @@ export function DesktopSidebar() {
                 border: `2px solid ${active ? "rgba(88,204,2,0.22)" : "transparent"}`,
               }}
             >
-              <span style={{ color: active ? "#58cc02" : "#c4c6d0" }}>
+              <span style={{ color: active ? "#58cc02" : "#9ca3af" }}>
                 {icon(active)}
               </span>
               {label}

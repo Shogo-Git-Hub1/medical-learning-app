@@ -127,52 +127,45 @@ function SubjectHeader({
 
   return (
     <div
-      className="rounded-2xl p-5 relative overflow-hidden"
+      className="rounded-2xl px-4 py-3 relative overflow-hidden"
       style={{
         background: `linear-gradient(135deg, ${theme.grad0}, ${theme.grad1})`,
-        boxShadow: `0 6px 24px ${theme.main}55`,
+        boxShadow: `0 4px 16px ${theme.main}44`,
       }}
     >
-      {/* Decorative circles */}
-      <div className="absolute -right-10 -top-10 w-36 h-36 rounded-full bg-white/10" aria-hidden />
-      <div className="absolute right-6 bottom-[-28px] w-20 h-20 rounded-full bg-white/10" aria-hidden />
+      {/* Decorative circle */}
+      <div className="absolute -right-8 -top-8 w-28 h-28 rounded-full bg-white/10" aria-hidden />
 
       <div className="relative">
-        {/* Back button */}
-        <button
-          type="button"
-          onClick={onBack}
-          className="flex items-center gap-1 text-white/80 text-sm font-bold mb-4 transition-opacity duration-150 active:opacity-60"
-          aria-label="戻る"
-        >
-          <svg viewBox="0 0 24 24" width={18} height={18} fill="none" aria-hidden>
-            <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          科目一覧に戻る
-        </button>
+        {/* Top row: back button + icon + title + stats badge */}
+        <div className="flex items-center gap-2 mb-2.5">
+          <button
+            type="button"
+            onClick={onBack}
+            className="flex items-center gap-0.5 text-white/75 text-xs font-bold shrink-0 transition-opacity duration-150 active:opacity-60"
+            aria-label="戻る"
+          >
+            <svg viewBox="0 0 24 24" width={16} height={16} fill="none" aria-hidden>
+              <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            科目一覧
+          </button>
 
-        {/* Subject title row */}
-        <div className="flex items-center gap-3 mb-4">
-          <span className="text-4xl select-none drop-shadow-sm" aria-hidden>{theme.icon}</span>
-          <h1 className="text-white font-bold text-xl font-nunito drop-shadow-sm leading-tight">
+          <span className="text-white/40 text-xs shrink-0" aria-hidden>/</span>
+
+          <span className="text-2xl select-none drop-shadow-sm shrink-0" aria-hidden>{theme.icon}</span>
+          <h1 className="text-white font-bold text-base font-nunito drop-shadow-sm leading-tight min-w-0 truncate">
             {subject}
           </h1>
-        </div>
 
-        {/* Stats row */}
-        <div className="flex items-center gap-3 mb-3">
-          <div className="bg-white/25 rounded-full px-3 py-1 text-white/95 text-sm font-bold">
-            {completedCount} / {total} レッスン完了
+          <div className="ml-auto shrink-0 bg-white/25 rounded-full px-2.5 py-0.5 text-white/95 text-xs font-bold whitespace-nowrap">
+            {completedCount} / {total}
+            {completedCount === total && total > 0 && <span className="ml-1">🎉</span>}
           </div>
-          {completedCount === total && total > 0 && (
-            <div className="bg-white/25 rounded-full px-3 py-1 text-white text-sm font-bold flex items-center gap-1">
-              <span>🎉</span> 全て完了！
-            </div>
-          )}
         </div>
 
         {/* Progress bar */}
-        <div className="h-3 rounded-full bg-white/30 overflow-hidden">
+        <div className="h-1.5 rounded-full bg-white/30 overflow-hidden">
           <div
             className="h-full rounded-full bg-white transition-all duration-700 ease-out"
             style={{ width: `${progressPct}%` }}

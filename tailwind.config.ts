@@ -146,11 +146,6 @@ const config: Config = {
           "0%, 100%": { boxShadow: "0 0 8px rgba(88,204,2,0.3), 4px 4px 8px rgba(197,202,209,0.7), -4px -4px 8px rgba(255,255,255,0.9)" },
           "50%": { boxShadow: "0 0 22px rgba(88,204,2,0.65), 0 0 44px rgba(88,204,2,0.2), 4px 4px 8px rgba(197,202,209,0.7), -4px -4px 8px rgba(255,255,255,0.9)" },
         },
-        /** 近未来UI: ヘッダースキャンライン */
-        "scan-h": {
-          "0%": { transform: "translateX(-100%)", opacity: "0.6" },
-          "100%": { transform: "translateX(300%)", opacity: "0" },
-        },
         /** ロード中…のドット点滅 */
         "dot-blink": {
           "0%, 70%, 100%": { opacity: "0" },
@@ -173,7 +168,6 @@ const config: Config = {
         "fade-in-up": "fade-in-up 0.5s cubic-bezier(0.22,1,0.36,1) forwards",
         "card-enter": "card-enter 0.45s cubic-bezier(0.22,1,0.36,1) forwards",
         "pulse-glow": "pulse-glow 2.8s ease-in-out infinite",
-        "scan-h": "scan-h 3.5s linear infinite",
         "dot-blink": "dot-blink 1.4s ease-in-out infinite",
       },
     },

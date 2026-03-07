@@ -27,9 +27,11 @@
 | `src/components/QuizSession.tsx` | クイズの出題・正誤判定・解説・結果表示UI |
 | `src/components/LessonView.tsx` | 間隔反復問題の混在ロジック + QuizSessionの起動 |
 | `src/components/HomeDashboard.tsx` | ホーム画面（ストリーク・ミッション・XPカード） |
-| `src/components/RoadmapList.tsx` | ロードマップ一覧（分野別・アンロック表示） |
+| `src/components/SubjectRoadmap.tsx` | 科目内ロードマップ（ノード表示・アンロック） |
 | `src/components/BrowseContent.tsx` | ブラウズ画面（フィルタチップ・レッスン一覧） |
 | `src/components/ContactForm.tsx` | お問い合わせ・問題報告フォーム |
+| `src/components/DesktopSidebar.tsx` | デスクトップ左サイドバー（md 以上で表示） |
+| `src/components/BottomNav.tsx` | モバイルボトムナビ（md 未満で表示） |
 | `src/app/globals.css` | グローバルCSSとTailwindのベーススタイル |
 | `tailwind.config.ts` | Tailwindのカラーテーマ（`primary`など）の定義 |
 
@@ -39,11 +41,13 @@
 
 | ファイル | 役割 |
 |----------|------|
-| `src/app/layout.tsx` | 共通レイアウト（ヘッダー・ナビゲーション） |
+| `src/app/layout.tsx` | 共通レイアウト（サイドバー・モバイルヘッダー・BottomNav） |
 | `src/app/page.tsx` | ホームページ（`/`） |
-| `src/app/roadmap/page.tsx` | ロードマップページ（`/roadmap`） |
+| `src/app/subjects/page.tsx` | 科目一覧ページ（`/subjects`） |
+| `src/app/subjects/[subject]/page.tsx` | 科目別ロードマップ（`/subjects/:subject`） |
 | `src/app/browse/page.tsx` | ブラウズページ（`/browse`） |
 | `src/app/lesson/[id]/page.tsx` | レッスンページ（`/lesson/:id`）・`generateStaticParams` 定義 |
+| `src/app/profile/page.tsx` | プロフィールページ（`/profile`） |
 | `src/app/contact/page.tsx` | お問い合わせページ（`/contact`） |
 | `src/app/manifest.ts` | PWAマニフェスト |
 

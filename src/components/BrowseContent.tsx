@@ -43,6 +43,11 @@ export function BrowseContent() {
 
   return (
     <div className="space-y-6">
+      {/* ─── ページタイトル ────────────────────────────────── */}
+      <h1 className="text-xl font-bold font-nunito text-pastel-ink animate-fade-in-up">
+        ブラウズ
+      </h1>
+
       {/* ─── 検索バー ─────────────────────────────────────── */}
       <div
         className="relative animate-fade-in-up"

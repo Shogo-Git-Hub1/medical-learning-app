@@ -93,10 +93,10 @@ export function getLessonsFiltered(subject: string | null, examTag: string | nul
   return list;
 }
 
-/** 実際に使われている科目一覧（レッスンから抽出） */
+/** 実際に使われている科目一覧（SUBJECT_DISPLAY_ORDER 順） */
 export function getSubjectsInUse(): string[] {
   const set = new Set(questionDb.lessons.map((l) => l.subject).filter(Boolean));
-  return [...set] as string[];
+  return SUBJECT_DISPLAY_ORDER.filter((s) => set.has(s));
 }
 
 /** 実際に使われている試験タグ一覧（レッスンから抽出） */

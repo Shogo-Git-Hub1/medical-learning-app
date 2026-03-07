@@ -348,7 +348,7 @@ function SubjectShortcuts() {
           className="flex-1 rounded-2xl py-3.5 px-4 text-center transition-all duration-150 active:scale-[0.97] active:translate-y-0.5"
           style={{
             background: "var(--neu-bg)",
-            boxShadow: "0 4px 0 rgba(88,204,2,0.35), 0 6px 16px rgba(88,204,2,0.15), var(--neu-shadow)",
+            boxShadow: "0 4px 0 rgba(88,204,2,0.35), 0 6px 16px rgba(88,204,2,0.15), var(--neu-shadow-sm)",
             border: "1.5px solid rgba(88,204,2,0.25)",
           }}
         >
@@ -362,7 +362,7 @@ function SubjectShortcuts() {
         className="flex-1 rounded-2xl py-3.5 px-4 text-center transition-all duration-150 active:scale-[0.97] active:translate-y-0.5"
         style={{
           background: "var(--neu-bg)",
-          boxShadow: "0 4px 0 rgba(0,0,0,0.12), var(--neu-shadow)",
+          boxShadow: "0 4px 0 rgba(0,0,0,0.12), var(--neu-shadow-sm)",
           border: "1.5px solid rgba(0,0,0,0.07)",
         }}
       >
