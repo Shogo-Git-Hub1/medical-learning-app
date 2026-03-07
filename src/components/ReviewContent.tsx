@@ -49,6 +49,7 @@ export function ReviewContent() {
       questions={questions}
       lessonId="review"
       lessonTitle={`復習セッション（${questions.length}問）`}
+      backHref="/"
     />
   );
 }

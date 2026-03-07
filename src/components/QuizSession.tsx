@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import type { Question } from "@/types";
 import { useProgressContext } from "@/contexts/ProgressContext";
 import { setLastLessonResult } from "@/lib/progress";
 import { shuffle, getStableCharacterIndex } from "@/lib/utils";
 import { PushButton } from "@/components/ui/PushButton";
-import { ProgressBar } from "@/components/ui/ProgressBar";
 import { LightningComboOverlay } from "@/components/LightningComboOverlay";
 import { playCorrect, playWrong, playComplete } from "@/lib/sounds";
 import { getSessionIntroLine } from "@/data/characters";
@@ -18,15 +19,27 @@ import { QuizQuestion } from "@/components/quiz/QuizQuestion";
 
 const ALL_CHARACTER_IDS: CharacterId[] = ["skurun", "regi", "shirin"];
 
+/** `from` クエリパラメータから戻り先 href を決定する（オープンリダイレクト対策あり） */
+function resolveBackHref(from: string): string {
+  if (!from.startsWith("/")) return "/subjects";
+  if (from.startsWith("/subjects")) return from;
+  if (from.startsWith("/browse")) return "/browse";
+  return "/subjects";
+}
+
 type Props = {
   questions: Question[];
   lessonId: string;
   lessonTitle: string;
   lessonLevel?: number;
+  /** 戻り先を明示的に指定する場合（指定がなければ ?from= クエリから解決） */
+  backHref?: string;
 };
 
-export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1 }: Props) {
+export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1, backHref: backHrefProp }: Props) {
   const { recordAnswer, completeLesson } = useProgressContext();
+  const searchParams = useSearchParams();
+  const backHref = backHrefProp ?? resolveBackHref(searchParams.get("from") ?? "");
 
   // セッションイントロ（lessonId から決定的にキャラを選び、SSR/クライアントでハイドレーション不一致を防ぐ）
   const introCharacter = useMemo(
@@ -117,7 +130,8 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1 
 
   const handleNext = useCallback(() => {
     if (isLast) {
-      const correctCount = results.filter(Boolean).length + (isCorrect ? 1 : 0);
+      // results には handleSelect 時点で最終回答が追加済みのため + (isCorrect ? 1 : 0) は不要
+      const correctCount = results.filter(Boolean).length;
       const accuracy = displayQuestions.length > 0 ? correctCount / displayQuestions.length : 0;
       setLastLessonResult(lessonId, accuracy);
       completeLesson(lessonId);
@@ -129,7 +143,7 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1 
       setSelectedId(null);
       setShowFeedback(false);
     }
-  }, [isLast, isCorrect, results, displayQuestions.length, lessonId, completeLesson]);
+  }, [isLast, results, displayQuestions.length, lessonId, completeLesson]);
 
   const questionRegionRef = useRef<HTMLDivElement>(null);
   const nextButtonRef = useRef<HTMLButtonElement>(null);
@@ -137,7 +151,6 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1 
   useEffect(() => {
     if (!current) return;
     questionRegionRef.current?.focus({ preventScroll: true });
-    // 問題が切り替わったときのみフォーカス。current を依存に含めると参照変動で毎問実行されるため index のみ
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index]);
 
@@ -166,30 +179,9 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1 
     [current, showFeedback, handleNext, handleSelect]
   );
 
-  if (showIntro) {
-    return (
-      <QuizIntro
-        introCharacter={introCharacter}
-        introLine={introLine}
-        introFading={introFading}
-        onSkip={skipIntro}
-      />
-    );
-  }
-
-  if (displayQuestions.length === 0) {
-    return (
-      <div className="neu-inset rounded-2xl p-8 text-center">
-        <p className="font-mono text-sm text-pastel-ink/50">{"// このレッスンには問題がありません"}</p>
-        <PushButton href="/subjects" variant="primary" className="mt-6">
-          科目一覧に戻る
-        </PushButton>
-      </div>
-    );
-  }
-
+  // ─── 完了画面 ─────────────────────────────────────────────────────────
   if (showCompleted) {
-    const correctCount = results.filter(Boolean).length + (isCorrect ? 1 : 0);
+    const correctCount = results.filter(Boolean).length;
     const total = displayQuestions.length;
     const isGoodScore = total > 0 && correctCount >= total * 0.8;
     return (
@@ -205,8 +197,75 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1 
     );
   }
 
+  // ─── 問題なし ─────────────────────────────────────────────────────────
+  if (displayQuestions.length === 0) {
+    return (
+      <div className="neu-inset rounded-2xl p-8 text-center">
+        <p className="font-mono text-sm text-pastel-ink/50">{"// このレッスンには問題がありません"}</p>
+        <PushButton href="/subjects" variant="primary" className="mt-6">
+          科目一覧に戻る
+        </PushButton>
+      </div>
+    );
+  }
+
+  // ─── × ボタン（イントロ・問題両フェーズ共通） ─────────────────────────
+  const CloseButton = (
+    <Link
+      href={backHref}
+      aria-label="レッスンを終了する"
+      className="flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-xl transition-all duration-150 active:scale-95"
+      style={{
+        background: "rgba(0,0,0,0.07)",
+        color: "rgba(0,0,0,0.38)",
+      }}
+    >
+      <svg
+        width="15"
+        height="15"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.8"
+        strokeLinecap="round"
+        aria-hidden
+      >
+        <path d="M18 6L6 18M6 6l12 12" />
+      </svg>
+    </Link>
+  );
+
+  // ─── イントロ画面 ─────────────────────────────────────────────────────
+  if (showIntro) {
+    return (
+      <div className="space-y-4 animate-fade-in-up">
+        {/* イントロヘッダー：×ボタン + レッスンタイトル */}
+        <div className="flex items-center gap-3 pt-1">
+          {CloseButton}
+          <span
+            className="text-sm font-bold font-nunito truncate"
+            style={{ color: "rgba(0,0,0,0.28)" }}
+          >
+            {lessonTitle}
+          </span>
+        </div>
+
+        <QuizIntro
+          introCharacter={introCharacter}
+          introLine={introLine}
+          introFading={introFading}
+          onSkip={skipIntro}
+        />
+      </div>
+    );
+  }
+
   const questionPositionId = "quiz-question-position";
   const questionLabelId = "quiz-question-label";
+  const correctAnswerCount = results.filter(Boolean).length;
+  const progressPct = displayQuestions.length > 0
+    ? Math.round((correctAnswerCount / displayQuestions.length) * 100)
+    : 0;
 
   // ─── クイズ本体 ──────────────────────────────────────────────────────
   return (
@@ -228,41 +287,66 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1 
         />
       )}
 
-      {/* ヘッダー：問題番号・コンボ・進捗・キーボード操作のヒント */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between flex-wrap gap-1">
-          <span
-            id={questionPositionId}
-            className="text-[10px] font-mono text-pastel-ink/35 tracking-widest"
-            aria-hidden="false"
-          >
-            Q {index + 1} / {displayQuestions.length}
-          </span>
-          <span className="text-[10px] font-mono text-pastel-ink/30 hidden sm:inline" aria-hidden>
-            1〜4で選択、Enterで次へ
-          </span>
-          {displayCombo >= 1 && (
+      {/* ヘッダー：× ボタン + プログレスバー + コンボ */}
+      <div className="flex items-center gap-3 pt-1">
+        {/* × ボタン */}
+        {CloseButton}
+
+        {/* プログレスバー */}
+        <div
+          className="flex-1 relative h-[14px] rounded-full overflow-hidden"
+          role="progressbar"
+          aria-valuenow={correctAnswerCount}
+          aria-valuemin={0}
+          aria-valuemax={displayQuestions.length}
+          aria-label={`正解 ${correctAnswerCount} / ${displayQuestions.length}`}
+          style={{
+            background: "rgba(0,0,0,0.08)",
+            boxShadow: "inset 0 2px 4px rgba(0,0,0,0.1)",
+          }}
+        >
+          <div
+            className="h-full rounded-full transition-all duration-500 ease-out"
+            style={{
+              width: `${progressPct}%`,
+              background: "linear-gradient(90deg, #58cc02 0%, #89e219 100%)",
+              boxShadow: "0 2px 8px rgba(88,204,2,0.45), inset 0 1px 0 rgba(255,255,255,0.3)",
+            }}
+          />
+        </div>
+
+        {/* コンボバッジ or キーボードヒント */}
+        <div className="flex-shrink-0 w-14 flex justify-end">
+          {displayCombo >= 1 ? (
             <div
-              className="flex items-center gap-1.5 rounded-full px-3 py-1"
+              className="flex items-center gap-1 rounded-full px-2.5 py-1"
               style={{
-                background: "var(--neu-bg)",
-                boxShadow: "var(--neu-shadow-sm), 0 0 10px rgba(255,200,0,0.35)",
+                background: "rgba(255,200,0,0.12)",
+                border: "1.5px solid rgba(255,200,0,0.35)",
               }}
-              aria-label={`${displayCombo} 連続正解`}
+              aria-label={`${displayCombo}連続正解`}
             >
-              <span aria-hidden>🔥</span>
-              <span className="text-sm font-bold text-pastel-ink font-mono">{displayCombo}</span>
-              <span className="text-xs text-pastel-ink/50">コンボ</span>
+              <span aria-hidden className="text-sm leading-none">🔥</span>
+              <span className="text-xs font-bold font-nunito" style={{ color: "#d97706" }}>
+                {displayCombo}
+              </span>
             </div>
+          ) : (
+            <span
+              className="text-[10px] font-mono hidden sm:inline"
+              style={{ color: "rgba(0,0,0,0.2)" }}
+              aria-hidden
+            >
+              1〜4
+            </span>
           )}
         </div>
-        <ProgressBar
-          current={results.filter(Boolean).length}
-          total={displayQuestions.length}
-          label="正解"
-          variant="quiz"
-        />
       </div>
+
+      {/* アクセシビリティ用：問題番号の読み上げ */}
+      <span id={questionPositionId} className="sr-only">
+        {index + 1}問目、全{displayQuestions.length}問中
+      </span>
 
       <QuizQuestion
         current={current}
