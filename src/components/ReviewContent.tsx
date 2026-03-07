@@ -1,14 +1,31 @@
 "use client";
 
 import Link from "next/link";
-import { useProgress } from "@/hooks/useProgress";
-import { getQuestionsById } from "@/services/lessonService";
+import { useEffect, useState } from "react";
+import { loadProgress } from "@/lib/progress";
+import {
+  getQuestionsById,
+  getDueReviewQuestionIdsThatExist,
+} from "@/services/lessonService";
 import { QuizSession } from "@/components/QuizSession";
+import type { Question } from "@/types";
 
 export function ReviewContent() {
-  const { getDueReviewQuestionIds } = useProgress();
-  const dueIds = getDueReviewQuestionIds();
-  const questions = getQuestionsById(dueIds);
+  const [questions, setQuestions] = useState<Question[] | null>(null);
+
+  useEffect(() => {
+    const { progress } = loadProgress();
+    const dueIds = getDueReviewQuestionIdsThatExist(progress);
+    setQuestions(getQuestionsById(dueIds));
+  }, []);
+
+  if (questions === null) {
+    return (
+      <div className="neu-inset rounded-2xl p-10 text-center animate-fade-in-up">
+        <p className="text-pastel-ink/70 text-sm font-nunito">読み込み中…</p>
+      </div>
+    );
+  }
 
   if (questions.length === 0) {
     return (

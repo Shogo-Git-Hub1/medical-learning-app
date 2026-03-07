@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import type { Question } from "@/types";
 import { useProgress } from "@/hooks/useProgress";
@@ -47,13 +47,23 @@ function ReportQuestionLink({
     <Link
       href={`/contact?${params.toString()}`}
       className="text-[10px] font-mono text-pastel-ink/30 hover:text-pastel-ink/60 transition-colors"
+      aria-label="この問題を報告する"
     >
-      // 問題を報告
+      この問題を報告
     </Link>
   );
 }
 
 const ALL_CHARACTER_IDS: CharacterId[] = ["skurun", "regi", "shirin"];
+
+/** lessonId から 0 〜 (length-1) の決定的なインデックスを返し、SSR/クライアントで同じキャラになるようにする */
+function getStableCharacterIndex(lessonId: string, length: number): number {
+  let h = 0;
+  for (let i = 0; i < lessonId.length; i++) {
+    h = (h * 31 + lessonId.charCodeAt(i)) >>> 0;
+  }
+  return h % length;
+}
 
 function LoadingDots() {
   return (
@@ -81,10 +91,13 @@ type Props = {
 export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1 }: Props) {
   const { recordAnswer, completeLesson } = useProgress();
 
-  // セッションイントロ（マウント時にランダムキャラ・台詞を固定）
+  // セッションイントロ（lessonId から決定的にキャラを選び、SSR/クライアントでハイドレーション不一致を防ぐ）
   const introCharacter = useMemo(
-    () => ALL_CHARACTER_IDS[Math.floor(Math.random() * ALL_CHARACTER_IDS.length)],
-    [] // eslint-disable-line react-hooks/exhaustive-deps
+    () =>
+      ALL_CHARACTER_IDS[
+        getStableCharacterIndex(lessonId, ALL_CHARACTER_IDS.length)
+      ],
+    [lessonId]
   );
   const introLine = useMemo(
     () => getSessionIntroLine(introCharacter, lessonTitle, lessonLevel, questions.length),
@@ -127,24 +140,27 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1 
   const correct = current?.options.find((o) => o.id === current.correctOptionId);
   const isCorrect = selectedId === current?.correctOptionId;
 
-  const getComboFromResults = (r: boolean[]) => {
+  const getComboFromResults = useCallback((r: boolean[]) => {
     let count = 0;
     for (let i = r.length - 1; i >= 0 && r[i]; i--) count++;
     return count;
-  };
+  }, []);
 
-  const handleSelect = (optionId: string) => {
-    if (showFeedback) return;
-    const correctAnswer = optionId === current.correctOptionId;
-    const comboBefore = getComboFromResults(results);
-    const comboAfter = correctAnswer ? comboBefore + 1 : 0;
-    setSelectedId(optionId);
-    setShowFeedback(true);
-    setResults((r) => [...r, correctAnswer]);
-    recordAnswer(current.id, correctAnswer, comboAfter);
-    if (correctAnswer) playCorrect();
-    else playWrong();
-  };
+  const handleSelect = useCallback(
+    (optionId: string) => {
+      if (showFeedback || !current) return;
+      const correctAnswer = optionId === current.correctOptionId;
+      const comboBefore = getComboFromResults(results);
+      const comboAfter = correctAnswer ? comboBefore + 1 : 0;
+      setSelectedId(optionId);
+      setShowFeedback(true);
+      setResults((r) => [...r, correctAnswer]);
+      recordAnswer(current.id, correctAnswer, comboAfter);
+      if (correctAnswer) playCorrect();
+      else playWrong();
+    },
+    [showFeedback, current, results, getComboFromResults, recordAnswer]
+  );
 
   const displayCombo = getComboFromResults(results);
   const [showCompleted, setShowCompleted] = useState(false);
@@ -161,7 +177,7 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1 
     }
   }, [showFeedback, isCorrect, displayCombo]);
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     if (isLast) {
       const correctCount = results.filter(Boolean).length + (isCorrect ? 1 : 0);
       const accuracy = displayQuestions.length > 0 ? correctCount / displayQuestions.length : 0;
@@ -175,7 +191,42 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1 
       setSelectedId(null);
       setShowFeedback(false);
     }
-  };
+  }, [isLast, isCorrect, results, displayQuestions.length, lessonId, completeLesson]);
+
+  const questionRegionRef = useRef<HTMLDivElement>(null);
+  const nextButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!current) return;
+    questionRegionRef.current?.focus({ preventScroll: true });
+    // 問題が切り替わったときのみフォーカス移動。current を依存に含めると参照変動で過剰実行されるため index のみ
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index]);
+
+  useEffect(() => {
+    if (showFeedback && nextButtonRef.current) {
+      nextButtonRef.current.focus({ preventScroll: true });
+    }
+  }, [showFeedback, index, results.length]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (!current) return;
+      if (e.key === "Enter" && showFeedback) {
+        e.preventDefault();
+        handleNext();
+        return;
+      }
+      if (!showFeedback && ["1", "2", "3", "4"].includes(e.key)) {
+        const optionIndex = Number(e.key) - 1;
+        if (optionIndex < current.options.length) {
+          e.preventDefault();
+          handleSelect(current.options[optionIndex].id);
+        }
+      }
+    },
+    [current, showFeedback, handleNext, handleSelect]
+  );
 
   // ─── セッションイントロ画面 ──────────────────────────────────────────
   if (showIntro) {
@@ -249,7 +300,7 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1 
   if (displayQuestions.length === 0) {
     return (
       <div className="neu-inset rounded-2xl p-8 text-center">
-        <p className="font-mono text-sm text-pastel-ink/50">// このレッスンには問題がありません</p>
+        <p className="font-mono text-sm text-pastel-ink/50">{"// このレッスンには問題がありません"}</p>
         <PushButton href="/roadmap" variant="primary" className="mt-6">
           ロードマップに戻る
         </PushButton>
@@ -295,7 +346,7 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1 
           />
 
           <p className="text-[10px] font-mono text-pastel-primary/55 tracking-[0.2em] mb-5 uppercase">
-            // Lesson Complete
+            {"// Lesson Complete"}
           </p>
           <h2 className="text-lg font-bold text-pastel-ink font-nunito">{lessonTitle}</h2>
 
@@ -355,9 +406,20 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1 
     );
   }
 
+  const questionPositionId = "quiz-question-position";
+  const questionLabelId = "quiz-question-label";
+
   // ─── クイズ本体 ──────────────────────────────────────────────────────
   return (
-    <div className="space-y-5 animate-fade-in-up">
+    <div
+      className="space-y-5 animate-fade-in-up"
+      ref={questionRegionRef}
+      tabIndex={-1}
+      onKeyDown={handleKeyDown}
+      role="region"
+      aria-label={`クイズ: ${lessonTitle}`}
+      aria-describedby={questionPositionId}
+    >
       {showLightningOverlay && (
         <LightningComboOverlay
           key={displayCombo}
@@ -367,11 +429,18 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1 
         />
       )}
 
-      {/* ヘッダー：問題番号・コンボ・進捗 */}
+      {/* ヘッダー：問題番号・コンボ・進捗・キーボード操作のヒント */}
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="text-[10px] font-mono text-pastel-ink/35 tracking-widest">
+        <div className="flex items-center justify-between flex-wrap gap-1">
+          <span
+            id={questionPositionId}
+            className="text-[10px] font-mono text-pastel-ink/35 tracking-widest"
+            aria-hidden="false"
+          >
             Q {index + 1} / {displayQuestions.length}
+          </span>
+          <span className="text-[10px] font-mono text-pastel-ink/30 hidden sm:inline" aria-hidden>
+            1〜4で選択、Enterで次へ
           </span>
           {displayCombo >= 1 && (
             <div
@@ -405,7 +474,11 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1 
           }}
           aria-hidden
         />
-        <h2 className="text-lg font-semibold text-pastel-ink leading-relaxed font-nunito">
+        <h2
+          id={questionLabelId}
+          className="text-lg font-semibold text-pastel-ink leading-relaxed font-nunito"
+          tabIndex={-1}
+        >
           {current.text}
         </h2>
         <div className="mt-3 flex justify-end">
@@ -419,11 +492,12 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1 
       </div>
 
       {/* 選択肢 */}
-      <ul className="space-y-3">
+      <ul className="space-y-3" role="group" aria-label="選択肢" aria-describedby={questionLabelId}>
         {current.options.map((opt, optionIndex) => {
           const chosen = selectedId === opt.id;
           const isRight = opt.id === current.correctOptionId;
           const accent = OPTION_ACCENTS[optionIndex % OPTION_ACCENTS.length];
+          const optionNumber = optionIndex + 1;
 
           // 状態ごとにシャドウ・ボーダー・背景を決定
           let shadowStyle = "var(--neu-shadow-sm)";
@@ -450,6 +524,8 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1 
           return (
             <li key={opt.id}>
               <button
+                type="button"
+                aria-label={`選択肢 ${optionNumber}: ${opt.text}`}
                 onClick={() => handleSelect(opt.id)}
                 disabled={showFeedback}
                 className={[
@@ -559,7 +635,7 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1 
               </p>
             )}
             {!isCorrect && displayCombo >= 1 && (
-              <p className="text-sm font-mono text-pastel-ink/55">// コンボが途切れました</p>
+              <p className="text-sm font-mono text-pastel-ink/55">{"// コンボが途切れました"}</p>
             )}
             {current.explanation && (
               <p className="mt-2 text-sm text-pastel-ink/70 leading-relaxed">
@@ -568,7 +644,13 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1 
             )}
           </div>
 
-          <PushButton type="button" onClick={handleNext} className="w-full">
+          <PushButton
+            type="button"
+            ref={nextButtonRef}
+            onClick={handleNext}
+            className="w-full"
+            aria-label={isLast ? "結果を見る" : "次の問題へ"}
+          >
             {isLast ? "結果を見る" : "次へ →"}
           </PushButton>
         </div>

@@ -2,6 +2,9 @@ import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { Nunito, Roboto } from "next/font/google";
 import { BottomNav } from "@/components/BottomNav";
+import { ProgressProvider } from "@/contexts/ProgressContext";
+import { ProgressErrorBanner } from "@/components/ProgressErrorBanner";
+import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
 import "./globals.css";
 
 const nunito = Nunito({
@@ -92,7 +95,11 @@ export default function RootLayout({
 
         {/* モバイルボトムナビの高さ分だけ下にパディング */}
         <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-6 pb-24 md:pb-6">
-          {children}
+          <ServiceWorkerRegistration />
+          <ProgressProvider>
+            <ProgressErrorBanner />
+            {children}
+          </ProgressProvider>
         </main>
 
         {/* モバイル専用ボトムナビ */}

@@ -6,15 +6,19 @@ export type QuestionReview = {
   interval: number;  // 日数
 };
 
+/** 進捗スキーマのバージョン。フィールド追加・変更時に上げ、migrate で古いデータを変換する */
+export const PROGRESS_SCHEMA_VERSION = 1;
+
 /**
  * localStorage に保存するユーザー進捗
  */
 export type UserProgress = {
+  version: number;
   lastStudyDate: string; // YYYY-MM-DD
   streakDays: number;
   dailyGoal: number;
   dailyAnswered: number;
-  dailyResetDate: string; // 日付が変わったら dailyAnswered を 0 に
+  dailyResetDate: string;
   totalXP: number;
   completedLessonIds: string[];
   questionReviews: Record<string, QuestionReview>;
@@ -23,6 +27,7 @@ export type UserProgress = {
 const STORAGE_KEY = "medical-learning-progress";
 
 const DEFAULT: UserProgress = {
+  version: PROGRESS_SCHEMA_VERSION,
   lastStudyDate: "",
   streakDays: 0,
   dailyGoal: 5,
@@ -37,31 +42,109 @@ export function getDefaultProgress(): UserProgress {
   return { ...DEFAULT };
 }
 
-export function loadProgress(): UserProgress {
-  if (typeof window === "undefined") return getDefaultProgress();
+/** 古い保存データを現在のスキーマに変換する（単体テスト用に export） */
+export function migrateProgress(parsed: Record<string, unknown>): UserProgress {
+  const version = typeof parsed.version === "number" ? parsed.version : 0;
+  const base = { ...DEFAULT };
+
+  if (version >= 1) {
+    return {
+      ...base,
+      version: PROGRESS_SCHEMA_VERSION,
+      lastStudyDate: typeof parsed.lastStudyDate === "string" ? parsed.lastStudyDate : base.lastStudyDate,
+      streakDays: typeof parsed.streakDays === "number" ? parsed.streakDays : base.streakDays,
+      dailyGoal: typeof parsed.dailyGoal === "number" ? parsed.dailyGoal : base.dailyGoal,
+      dailyAnswered: typeof parsed.dailyAnswered === "number" ? parsed.dailyAnswered : base.dailyAnswered,
+      dailyResetDate: typeof parsed.dailyResetDate === "string" ? parsed.dailyResetDate : base.dailyResetDate,
+      totalXP: typeof parsed.totalXP === "number" ? parsed.totalXP : base.totalXP,
+      completedLessonIds: Array.isArray(parsed.completedLessonIds) && parsed.completedLessonIds.every((id): id is string => typeof id === "string")
+        ? parsed.completedLessonIds
+        : base.completedLessonIds,
+      questionReviews: typeof parsed.questionReviews === "object" && parsed.questionReviews !== null && !Array.isArray(parsed.questionReviews)
+        ? (parsed.questionReviews as Record<string, QuestionReview>)
+        : base.questionReviews,
+    };
+  }
+
+  // version 0: 旧形式（version フィールドなし）
+  return {
+    ...base,
+    version: PROGRESS_SCHEMA_VERSION,
+    lastStudyDate: typeof parsed.lastStudyDate === "string" ? parsed.lastStudyDate : base.lastStudyDate,
+    streakDays: typeof parsed.streakDays === "number" ? parsed.streakDays : base.streakDays,
+    dailyGoal: typeof parsed.dailyGoal === "number" ? parsed.dailyGoal : base.dailyGoal,
+    dailyAnswered: typeof parsed.dailyAnswered === "number" ? parsed.dailyAnswered : base.dailyAnswered,
+    dailyResetDate: typeof parsed.dailyResetDate === "string" ? parsed.dailyResetDate : base.dailyResetDate,
+    totalXP: typeof parsed.totalXP === "number" ? parsed.totalXP : base.totalXP,
+    completedLessonIds: Array.isArray(parsed.completedLessonIds) && parsed.completedLessonIds.every((id): id is string => typeof id === "string")
+      ? parsed.completedLessonIds
+      : base.completedLessonIds,
+    questionReviews: typeof parsed.questionReviews === "object" && parsed.questionReviews !== null && !Array.isArray(parsed.questionReviews)
+      ? (parsed.questionReviews as Record<string, QuestionReview>)
+      : base.questionReviews,
+  };
+}
+
+export type LoadProgressResult =
+  | { progress: UserProgress; loadError: null }
+  | { progress: UserProgress; loadError: string };
+
+/**
+ * localStorage から進捗を読み込む。
+ * パース失敗時は loadError にメッセージを入れ、progress はデフォルトを返す。
+ */
+export function loadProgress(): LoadProgressResult {
+  if (typeof window === "undefined") {
+    return { progress: getDefaultProgress(), loadError: null };
+  }
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    const parsed = raw ? (JSON.parse(raw) as Partial<UserProgress>) : {};
-    const progress: UserProgress = { ...DEFAULT, ...parsed };
+    if (!raw) {
+      return { progress: getDefaultProgress(), loadError: null };
+    }
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const progress = migrateProgress(parsed);
     const today = getToday();
     if (progress.dailyResetDate !== today) {
       progress.dailyAnswered = 0;
       progress.dailyResetDate = today;
       saveProgress(progress);
     }
-    return progress;
-  } catch {
-    return getDefaultProgress();
+    return { progress, loadError: null };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "不明なエラー";
+    if (typeof console !== "undefined" && console.warn) {
+      console.warn("[progress] 進捗の読み込みに失敗しました。最初からになります。", message);
+    }
+    return {
+      progress: getDefaultProgress(),
+      loadError: "進捗の読み込みに失敗しました。最初からになります。",
+    };
   }
 }
 
-export function saveProgress(progress: UserProgress): void {
-  if (typeof window === "undefined") return;
+/**
+ * 進捗を localStorage に保存する。
+ * @returns 保存に成功した場合 true、クォータ超過などで失敗した場合 false
+ */
+export function saveProgress(progress: UserProgress): boolean {
+  if (typeof window === "undefined") return false;
+  const toSave: UserProgress = { ...progress, version: PROGRESS_SCHEMA_VERSION };
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
-  } catch {
-    // ignore
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+    return true;
+  } catch (e) {
+    const isQuota = e instanceof DOMException && (e.name === "QuotaExceededError" || e.code === 22);
+    if (typeof console !== "undefined" && console.warn) {
+      console.warn("[progress] 進捗の保存に失敗しました。", isQuota ? "ストレージの容量が不足しています。" : e);
+    }
+    return false;
   }
+}
+
+/** 保存失敗時にユーザーへ表示するメッセージを取得する */
+export function getSaveErrorMessage(): string {
+  return "進捗を保存できませんでした。ストレージの空き容量を増やしてから再度お試しください。";
 }
 
 export type LastLessonResult = { lessonId: string; accuracy: number };
@@ -80,7 +163,11 @@ export function getLastLessonResult(): LastLessonResult | null {
 
 export function setLastLessonResult(lessonId: string, accuracy: number): void {
   if (typeof window === "undefined") return;
-  localStorage.setItem(LAST_LESSON_RESULT_KEY, JSON.stringify({ lessonId, accuracy }));
+  try {
+    localStorage.setItem(LAST_LESSON_RESULT_KEY, JSON.stringify({ lessonId, accuracy }));
+  } catch {
+    // 補助データのため失敗は無視
+  }
 }
 
 const LAST_SUBJECT_KEY = "medical-learning-last-subject";
@@ -92,7 +179,11 @@ export function getLastSubject(): string | null {
 
 export function setLastSubject(subject: string): void {
   if (typeof window === "undefined") return;
-  localStorage.setItem(LAST_SUBJECT_KEY, subject);
+  try {
+    localStorage.setItem(LAST_SUBJECT_KEY, subject);
+  } catch {
+    // 補助データのため失敗は無視
+  }
 }
 
 /** 今日の日付 YYYY-MM-DD（ローカル） */

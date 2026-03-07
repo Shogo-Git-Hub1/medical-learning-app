@@ -1,4 +1,6 @@
 import type { QuestionDatabase } from "@/types";
+import { getToday } from "@/lib/progress";
+import type { UserProgress } from "@/lib/progress";
 import { subjectQuestions, subjectLessons, SUBJECT_DISPLAY_ORDER } from "./subjects";
 
 /**
@@ -17,6 +19,19 @@ export function getQuestionsById(ids: string[]) {
     .map((id) => map.get(id))
     .filter((q): q is NonNullable<typeof q> => q != null)
     .sort((a, b) => a.order - b.order);
+}
+
+/**
+ * 今日復習対象かつ問題DBに存在する問題ID一覧。
+ * ホームの件数表示と復習ページの一覧で同じロジックを使い、表示の食い違いを防ぐ。
+ */
+export function getDueReviewQuestionIdsThatExist(progress: UserProgress): string[] {
+  const today = getToday();
+  const dueIds = Object.entries(progress.questionReviews)
+    .filter(([, r]) => r.nextReview <= today)
+    .map(([id]) => id);
+  const questions = getQuestionsById(dueIds);
+  return questions.map((q) => q.id);
 }
 
 /** レッスンIDでレッスンとその問題一覧を取得 */

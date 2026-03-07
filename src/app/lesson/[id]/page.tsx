@@ -24,7 +24,7 @@ export default async function LessonPage({
             style={{ background: "linear-gradient(90deg, transparent, rgba(232,100,100,0.6), transparent)" }}
             aria-hidden
           />
-          <p className="font-mono text-xs text-pastel-ink/40 mb-2">// 404 NOT FOUND</p>
+          <p className="font-mono text-xs text-pastel-ink/40 mb-2">{"// 404 NOT FOUND"}</p>
           <h1 className="text-lg font-bold text-pastel-ink">レッスンが見つかりません</h1>
         </div>
         <Suspense>
@@ -57,7 +57,7 @@ export default async function LessonPage({
 
           <div className="flex-1 min-w-0">
             <p className="text-[10px] font-mono text-pastel-ink/35 tracking-widest uppercase mb-0.5">
-              {lesson.subject ?? "レッスン"} // LV.{lesson.level}
+              {`${lesson.subject ?? "レッスン"} // LV.${lesson.level}`}
             </p>
             <h1 className="text-base font-bold text-pastel-ink font-nunito truncate">
               {lesson.title}

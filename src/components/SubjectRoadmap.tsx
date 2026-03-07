@@ -72,7 +72,7 @@ export function SubjectRoadmap({ subject }: Props) {
       <div className="space-y-4">
         <SubjectHeader subject={subject} completedCount={0} total={0} theme={theme} onBack={() => router.back()} />
         <div className="neu-inset rounded-2xl p-8 text-center">
-          <p className="font-mono text-sm text-pastel-ink/50">// この科目にはまだレッスンがありません</p>
+          <p className="font-mono text-sm text-pastel-ink/50">{"// この科目にはまだレッスンがありません"}</p>
         </div>
       </div>
     );

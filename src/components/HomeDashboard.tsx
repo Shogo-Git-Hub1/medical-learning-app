@@ -7,7 +7,8 @@ import { getLessonsGroupedBySubject, SUBJECT_DISPLAY_ORDER } from "@/services/le
 import { SUBJECT_THEMES, DEFAULT_THEME } from "@/components/RoadmapPrimitives";
 import { NavigatorsImage } from "@/components/CharacterAvatar";
 import { CharacterLine } from "@/components/CharacterLine";
-import { getLastSubject, getLastLessonResult, getToday } from "@/lib/progress";
+import { getLastSubject, getLastLessonResult } from "@/lib/progress";
+import { getDueReviewQuestionIdsThatExist } from "@/services/lessonService";
 import type { LastLessonResult } from "@/lib/progress";
 import type { Lesson } from "@/types";
 import type { UserProgress } from "@/lib/progress";
@@ -296,10 +297,7 @@ function TodayLessonCard({ progress }: { progress: UserProgress }) {
 
 // ─── ReviewQueueCard ───────────────────────────────────────────────────────────
 function ReviewQueueCard({ progress }: { progress: UserProgress }) {
-  const today = getToday();
-  const dueCount = Object.values(progress.questionReviews).filter(
-    (r) => r.nextReview <= today
-  ).length;
+  const dueCount = getDueReviewQuestionIdsThatExist(progress).length;
 
   if (dueCount === 0) return null;
 
@@ -425,7 +423,7 @@ export function HomeDashboard() {
         className="neu-inset rounded-2xl p-4 animate-fade-in-up"
         style={{ animationDelay: "300ms", animationFillMode: "both" }}
       >
-        <p className="font-mono text-xs text-pastel-primary/70 mb-1">// INFO</p>
+        <p className="font-mono text-xs text-pastel-primary/70 mb-1">{"// INFO"}</p>
         <p className="text-sm text-pastel-ink/60">
           ストリーク・デイリーミッション・レベル/XP・ロードマップ・間隔反復の5つで継続しやすい学習をサポートします。
         </p>

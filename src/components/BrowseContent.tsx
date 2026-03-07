@@ -93,7 +93,7 @@ export function BrowseContent() {
           aria-hidden
         />
         <p className="text-[10px] font-mono text-pastel-ink/40 uppercase tracking-widest mb-3">
-          // 科目
+          {"// 科目"}
         </p>
         <div className="flex flex-wrap gap-2">
           <FilterChip
@@ -124,7 +124,7 @@ export function BrowseContent() {
             aria-hidden
           />
           <p className="text-[10px] font-mono text-pastel-ink/40 uppercase tracking-widest mb-3">
-            // 試験タグ
+            {"// 試験タグ"}
           </p>
           <div className="flex flex-wrap gap-2">
             <FilterChip
@@ -150,13 +150,13 @@ export function BrowseContent() {
         style={{ animationDelay: "120ms", animationFillMode: "both" }}
       >
         <p className="text-[10px] font-mono text-pastel-ink/40 uppercase tracking-widest mb-3">
-          // レッスン{" "}
+          {"// レッスン"}{" "}
           <span className="text-pastel-primary">({filteredLessons.length}件)</span>
         </p>
 
         {filteredLessons.length === 0 ? (
           <div className="neu-inset rounded-2xl p-8 text-center">
-            <p className="font-mono text-sm text-pastel-ink/45">// 該当するレッスンがありません</p>
+            <p className="font-mono text-sm text-pastel-ink/45">{"// 該当するレッスンがありません"}</p>
           </div>
         ) : (
           <ul className="space-y-3">

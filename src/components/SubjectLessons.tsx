@@ -22,7 +22,7 @@ export function SubjectLessons({ subject }: Props) {
   if (lessons.length === 0) {
     return (
       <div className="neu-inset rounded-2xl p-6 text-center">
-        <p className="font-mono text-sm text-pastel-ink/50">// この科目にはまだレッスンがありません</p>
+        <p className="font-mono text-sm text-pastel-ink/50">{"// この科目にはまだレッスンがありません"}</p>
       </div>
     );
   }
@@ -61,7 +61,7 @@ export function SubjectLessons({ subject }: Props) {
                 <div className="neu-inset rounded-xl p-4 flex items-center justify-between opacity-50">
                   <div>
                     <span className="font-semibold text-sm text-pastel-ink">{lesson.title}</span>
-                    <p className="text-[10px] font-mono text-pastel-ink/50 mt-0.5">LEVEL {lesson.level} // LOCKED</p>
+                    <p className="text-[10px] font-mono text-pastel-ink/50 mt-0.5">{"LEVEL "}{lesson.level}{" // LOCKED"}</p>
                   </div>
                   <span className="text-base">🔒</span>
                 </div>
