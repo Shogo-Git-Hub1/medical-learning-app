@@ -13,10 +13,22 @@
   --pastel-purple: #9069cd;
   --pastel-ink: #3c3c3c;
   --pastel-border: #afafaf;
+
+  /* ニューモーフィズム */
+  --neu-bg: #E8ECF2;
+  --neu-dark: rgba(197, 202, 209, 0.72);
+  --neu-light: rgba(255, 255, 255, 0.92);
+  --neu-shadow-sm: 4px 4px 8px var(--neu-dark), -4px -4px 8px var(--neu-light);
+  --neu-shadow-md: 8px 8px 18px var(--neu-dark), -8px -8px 18px var(--neu-light);
+  --neu-shadow-lg: 14px 14px 28px var(--neu-dark), -14px -14px 28px var(--neu-light);
+  --neu-inset: inset 4px 4px 8px var(--neu-dark), inset -4px -4px 8px var(--neu-light);
+  --glow-green: 0 0 14px rgba(88, 204, 2, 0.45), 0 0 30px rgba(88, 204, 2, 0.15);
 }
 
 body {
-  background-color: #ffffff;
+  background-color: var(--neu-bg);
+  background-image: radial-gradient(circle, rgba(88, 204, 2, 0.07) 1px, transparent 1px);
+  background-size: 28px 28px;
   color: var(--pastel-ink);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -26,3 +38,24 @@ h1, h2, h3, h4 {
   font-family: var(--font-nunito), sans-serif;
 }
 
+@layer utilities {
+  .neu-card {
+    background: var(--neu-bg);
+    box-shadow: var(--neu-shadow-md);
+  }
+  .neu-card-sm {
+    background: var(--neu-bg);
+    box-shadow: var(--neu-shadow-sm);
+  }
+  .neu-card-lg {
+    background: var(--neu-bg);
+    box-shadow: var(--neu-shadow-lg);
+  }
+  .neu-inset {
+    background: var(--neu-bg);
+    box-shadow: var(--neu-inset);
+  }
+  .neu-glow {
+    box-shadow: var(--neu-shadow-sm), var(--glow-green);
+  }
+}

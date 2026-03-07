@@ -10,7 +10,7 @@ type Props = {
 };
 
 /**
- * 5の倍数コンボ達成時：画面全体に雷が上から下へ降りてくる＋フラッシュ＋「○コンボ！」を大きく一瞬表示
+ * 5の倍数コンボ達成時：画面全体に稲妻が走る＋フラッシュ＋「○コンボ！」を大きく一瞬表示
  */
 export function LightningComboOverlay({
   combo,
@@ -30,34 +30,56 @@ export function LightningComboOverlay({
       aria-live="polite"
       aria-label={`${combo} コンボ達成`}
     >
-      {/* 画面全体フラッシュ（白〜黄）：雷の直撃感 */}
+      {/* 画面フラッシュ（淡く短め） */}
       <div
-        className="absolute inset-0 bg-gradient-to-b from-white via-yellow-200/90 to-amber-100/80 animate-lightning-flash"
+        className="absolute inset-0 bg-gradient-to-b from-yellow-100/60 via-amber-50/30 to-transparent animate-lightning-flash"
         aria-hidden
       />
 
-      {/* 稲妻：画面上方から下方へ降りてくる（長い1本の雷・keyframes で translate(-50%, Y) により中央寄せ） */}
+      {/* 稲妻ボルト：シンプルな stroke パスで自然な形に */}
       <div
-        className="absolute top-0 left-1/2 h-[130vh] w-24 animate-lightning-bolt-fall"
+        className="absolute top-0 left-1/2 h-[130vh] w-20 animate-lightning-bolt-fall"
         aria-hidden
       >
         <svg
-          className="h-full w-full text-yellow-200 drop-shadow-[0_0_12px_rgba(255,255,255,0.95)]"
-          viewBox="0 0 80 520"
-          fill="currentColor"
-          preserveAspectRatio="xMidYMid meet"
+          className="h-full w-full drop-shadow-[0_0_18px_rgba(255,210,0,0.9)]"
+          viewBox="0 0 60 520"
+          fill="none"
+          preserveAspectRatio="none"
         >
-          {/* 縦長の稲妻（上から下へ走るジグザグ） */}
+          {/* グロー（背景の光輪） */}
           <path
-            d="M40 0 L28 80 L40 80 L22 180 L38 180 L18 280 L42 280 L24 380 L40 380 L20 480 L36 520 L44 520 L24 420 L40 420 L30 320 L16 320 L36 220 L20 220 L40 120 L26 120 L40 0 Z"
-            className="opacity-95"
+            d="M40 4 L20 258 L34 258 L14 516"
+            stroke="rgba(255,240,100,0.35)"
+            strokeWidth="28"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            vectorEffect="non-scaling-stroke"
+          />
+          {/* メインボルト */}
+          <path
+            d="M40 4 L20 258 L34 258 L14 516"
+            stroke="#FFEE44"
+            strokeWidth="10"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            vectorEffect="non-scaling-stroke"
+          />
+          {/* ハイライト（中央の白い芯） */}
+          <path
+            d="M40 4 L20 258 L34 258 L14 516"
+            stroke="rgba(255,255,255,0.85)"
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            vectorEffect="non-scaling-stroke"
           />
         </svg>
       </div>
 
       {/* 「○コンボ！」大きく一瞬表示 */}
       <div className="relative z-10 mt-24 animate-combo-pop-text">
-        <span className="text-5xl font-bold tracking-tight text-white drop-shadow-[0_0_20px_rgba(0,0,0,0.5)]">
+        <span className="text-8xl font-bold tracking-tight text-white drop-shadow-[0_0_20px_rgba(0,0,0,0.6)]">
           {combo} コンボ！
         </span>
       </div>

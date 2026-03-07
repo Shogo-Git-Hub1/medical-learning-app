@@ -5,39 +5,39 @@ import { PushButton } from "@/components/ui/PushButton";
 import { NavigatorsImage } from "@/components/CharacterAvatar";
 import { CharacterLine } from "@/components/CharacterLine";
 
-function DashboardCard({
-  title,
-  value,
-  sub,
-  color,
-}: {
+type StatCardProps = {
   title: string;
   value: string;
   sub: string;
-  color: "streak" | "primary" | "xp";
-}) {
-  const bg =
-    color === "streak"
-      ? "bg-pastel-rose/40 border-pastel-orange"
-      : color === "xp"
-        ? "bg-pastel-blue/20 border-pastel-blue"
-        : "bg-pastel-mint border-pastel-primary";
+  accentColor: string;
+  delay?: string;
+};
 
+function StatCard({ title, value, sub, accentColor, delay = "0ms" }: StatCardProps) {
   return (
-    <div className={`rounded-xl border-2 p-4 ${bg}`}>
-      <p className="text-xs font-medium text-pastel-ink/70 uppercase tracking-wide">{title}</p>
-      <p className="text-lg font-bold text-pastel-ink mt-1">{value}</p>
-      <p className="text-xs text-pastel-ink/80 mt-0.5">{sub}</p>
+    <div
+      className="neu-card rounded-2xl p-5 relative overflow-hidden animate-fade-in-up"
+      style={{ animationDelay: delay, animationFillMode: "both" }}
+    >
+      {/* 上部アクセントライン */}
+      <div
+        className="absolute top-0 left-6 right-6 h-0.5 rounded-b-full opacity-70"
+        style={{ background: `linear-gradient(90deg, transparent, ${accentColor}, transparent)` }}
+        aria-hidden
+      />
+      <p className="text-[10px] font-bold text-pastel-ink/45 uppercase tracking-widest font-mono">{title}</p>
+      <p className="text-2xl font-bold text-pastel-ink mt-2 font-nunito">{value}</p>
+      <p className="text-xs text-pastel-ink/55 mt-1">{sub}</p>
     </div>
   );
 }
 
 export function HomeDashboard() {
-  const { progress, level, xpInLevel, xpNeededForNext } = useProgress();
+  const { progress, level, xpNeededForNext } = useProgress();
 
   return (
     <div className="space-y-8">
-      <section>
+      <section className="animate-fade-in-up" style={{ animationFillMode: "both" }}>
         <NavigatorsImage className="mb-4" />
         <CharacterLine
           characterId="skurun"
@@ -45,44 +45,58 @@ export function HomeDashboard() {
           size="sm"
           className="mb-4"
         />
-        <h2 className="text-xl font-bold text-pastel-ink mb-4">今日の学習</h2>
+        <h2 className="text-sm font-bold text-pastel-ink/60 mb-4 font-mono tracking-widest uppercase">
+          <span className="text-pastel-primary">▶</span> 今日の学習
+        </h2>
         <div className="grid gap-3">
-          <DashboardCard
+          <StatCard
             title="ストリーク"
             value={`${progress.streakDays} 日`}
             sub="連続学習日数"
-            color="streak"
+            accentColor="#FFC800"
+            delay="60ms"
           />
-          <DashboardCard
+          <StatCard
             title="デイリーミッション"
             value={`${progress.dailyAnswered} / ${progress.dailyGoal} 問`}
             sub="今日の目標"
-            color="primary"
+            accentColor="#58CC02"
+            delay="120ms"
           />
-          <DashboardCard
+          <StatCard
             title="レベル・XP"
-            value={`Lv.${level} (${progress.totalXP} XP)`}
+            value={`Lv.${level}  (${progress.totalXP} XP)`}
             sub={`あと ${xpNeededForNext} XP でレベルアップ`}
-            color="xp"
+            accentColor="#BBF2FF"
+            delay="180ms"
           />
         </div>
       </section>
 
-      <section>
-        <h2 className="text-xl font-bold text-pastel-ink mb-4">クイックアクション</h2>
-        <div className="flex flex-col gap-2">
-          <PushButton href="/roadmap" className="w-full py-4">
-            レッスンを始める（ロードマップ）
+      <section
+        className="animate-fade-in-up"
+        style={{ animationDelay: "240ms", animationFillMode: "both" }}
+      >
+        <h2 className="text-sm font-bold text-pastel-ink/60 mb-4 font-mono tracking-widest uppercase">
+          <span className="text-pastel-primary">▶</span> クイックアクション
+        </h2>
+        <div className="flex flex-col gap-3">
+          <PushButton href="/subjects" className="w-full py-4">
+            科目を選んで学習を始める
           </PushButton>
-          <p className="text-sm text-pastel-ink/70 text-center">
-            復習タイミングに応じた問題もここに表示されます
-          </p>
+          <PushButton href="/roadmap" variant="secondary" className="w-full py-3">
+            ロードマップで学ぶ
+          </PushButton>
         </div>
       </section>
 
-      <section className="text-sm text-pastel-ink/80">
-        <p>
-          このアプリでは、ストリーク・デイリーミッション・レベル/XP・ロードマップ・間隔反復の5つで継続しやすい学習をサポートします。
+      <section
+        className="neu-inset rounded-2xl p-4 animate-fade-in-up"
+        style={{ animationDelay: "300ms", animationFillMode: "both" }}
+      >
+        <p className="font-mono text-xs text-pastel-primary/70 mb-1">// INFO</p>
+        <p className="text-sm text-pastel-ink/60">
+          ストリーク・デイリーミッション・レベル/XP・ロードマップ・間隔反復の5つで継続しやすい学習をサポートします。
         </p>
       </section>
     </div>

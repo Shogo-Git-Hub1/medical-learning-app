@@ -10,6 +10,8 @@ import { PushButton } from "@/components/ui/PushButton";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { LightningComboOverlay } from "@/components/LightningComboOverlay";
 import { CharacterLine } from "@/components/CharacterLine";
+import { ConfettiEffect } from "@/components/ConfettiEffect";
+import { playCorrect, playWrong, playComplete } from "@/lib/sounds";
 
 /** 選択肢ごとのパステル背景（デザインガイドの6色ベース） */
 const OPTION_PASTEL_CLASSES = [
@@ -92,12 +94,15 @@ export function QuizSession({ questions, lessonId, lessonTitle }: Props) {
     setShowFeedback(true);
     setResults((r) => [...r, correctAnswer]);
     recordAnswer(current.id, correctAnswer, comboAfter);
+    if (correctAnswer) playCorrect();
+    else playWrong();
   };
 
   /** 表示用：現在の連続正解コンボ数（直前の結果まで） */
   const displayCombo = getComboFromResults(results);
 
   const [showCompleted, setShowCompleted] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
   /** 5の倍数コンボ達成時の雷オーバーレイ（画面全体・一瞬表示） */
   const [showLightningOverlay, setShowLightningOverlay] = useState(false);
 
@@ -120,6 +125,8 @@ export function QuizSession({ questions, lessonId, lessonTitle }: Props) {
     if (isLast) {
       completeLesson(lessonId);
       setShowCompleted(true);
+      setShowConfetti(true);
+      playComplete();
     } else {
       setIndex((i) => i + 1);
       setSelectedId(null);
@@ -146,6 +153,7 @@ export function QuizSession({ questions, lessonId, lessonTitle }: Props) {
 
     return (
       <div className="space-y-6">
+        <ConfettiEffect active={showConfetti} duration={3000} />
         <div className="rounded-xl border-2 border-pastel-primary bg-pastel-mint p-6 text-center">
           <h2 className="text-xl font-bold text-pastel-ink">レッスン完了</h2>
           <p className="mt-2 text-pastel-ink/80">{lessonTitle}</p>

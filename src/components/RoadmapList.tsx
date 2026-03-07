@@ -23,7 +23,7 @@ export function RoadmapList() {
         size="sm"
         className="mb-2"
       />
-      {SUBJECT_DISPLAY_ORDER.map((subject) => {
+      {SUBJECT_DISPLAY_ORDER.map((subject, si) => {
         const lessons = grouped[subject];
         if (!lessons || lessons.length === 0) return null;
 
@@ -41,95 +41,103 @@ export function RoadmapList() {
         );
 
         return (
-          <section key={subject}>
-            <div className="mb-3 flex flex-col gap-2">
-              <h2 className="text-lg font-bold text-pastel-ink flex items-center gap-2">
-                <span className="w-2 h-6 rounded bg-pastel-primary" aria-hidden />
-                {subject}
-              </h2>
+          <section
+            key={subject}
+            className="animate-fade-in-up"
+            style={{ animationDelay: `${si * 60}ms`, animationFillMode: "both" }}
+          >
+            <div className="neu-card rounded-2xl p-5 mb-4 relative overflow-hidden">
+              {/* アクセントライン */}
+              <div
+                className="absolute top-0 left-6 right-6 h-0.5 rounded-b-full opacity-60"
+                style={{ background: "linear-gradient(90deg, transparent, #58cc02, transparent)" }}
+                aria-hidden
+              />
+              <div className="flex items-center gap-2 mb-3">
+                <span className="w-1.5 h-6 rounded-full bg-pastel-primary" aria-hidden
+                  style={{ boxShadow: "0 0 8px rgba(88,204,2,0.6)" }}
+                />
+                <h2 className="text-base font-bold text-pastel-ink font-nunito">{subject}</h2>
+              </div>
               <ProgressBar
                 current={completedInSubject}
                 total={totalInSubject}
                 label="レッスン"
                 variant="roadmap"
-                className="max-w-xs"
               />
             </div>
-            <div className="space-y-6">
+
+            <div className="space-y-5 pl-2">
               {ROADMAP_LEVELS.map((level) => {
                 const levelLessons = lessonsByLevel[level];
                 const hasLessons = levelLessons && levelLessons.length > 0;
 
                 return (
                   <div key={level} className="space-y-2">
-                    <h3 className="text-sm font-semibold text-pastel-ink/80 flex items-center gap-2">
+                    <h3 className="text-xs font-bold text-pastel-ink/50 font-mono uppercase tracking-widest flex items-center gap-2">
                       <span
-                        className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-pastel-primary/20 text-pastel-primary-dark font-bold text-xs"
+                        className="inline-flex items-center justify-center w-6 h-6 rounded-lg text-[10px] font-bold text-pastel-primary"
+                        style={{ boxShadow: "var(--neu-shadow-sm)" }}
                         aria-hidden
                       >
                         {level}
                       </span>
-                      レベル{level}
+                      LV.{level}
                     </h3>
-                    <ul className="space-y-3 pl-1">
+                    <ul className="space-y-2 pl-1">
                       {hasLessons ? (
-                        levelLessons.map((lesson, i) => {
+                        levelLessons.map((lesson) => {
                           const allInSubject = lessons;
                           const prevLessons = allInSubject.filter(
                             (l) =>
                               l.level < lesson.level ||
                               (l.level === lesson.level &&
-                                (l.orderInSubject ?? 0) < (lesson.orderInSubject ?? 0)
-                              )
+                                (l.orderInSubject ?? 0) < (lesson.orderInSubject ?? 0))
                           );
                           const prevDone =
                             prevLessons.length === 0 ||
                             prevLessons.every((l) =>
                               progress.completedLessonIds.includes(l.id)
                             );
-                          const done = progress.completedLessonIds.includes(
-                            lesson.id
-                          );
+                          const done = progress.completedLessonIds.includes(lesson.id);
                           const locked = !prevDone;
 
                           return (
                             <li key={lesson.id}>
                               {locked ? (
-                                <div className="block rounded-xl border-2 p-4 border-pastel-border bg-pastel-slate text-pastel-ink/50 cursor-not-allowed">
-                                  <span className="font-semibold">
-                                    {lesson.title}
-                                  </span>
-                                  <span className="ml-2 text-sm">
-                                    🔒 この分野の前のレッスンを完了してください
-                                  </span>
+                                <div className="neu-inset rounded-xl p-3 flex items-center justify-between opacity-50">
+                                  <span className="font-semibold text-sm text-pastel-ink">{lesson.title}</span>
+                                  <span className="text-xs">🔒</span>
                                 </div>
                               ) : (
                                 <Link
                                   href={`/lesson/${lesson.id}`}
-                                  className="block rounded-xl border-2 p-4 border-pastel-primary bg-pastel-card hover:bg-pastel-mint/60 text-pastel-ink transition"
+                                  className="neu-card-sm rounded-xl p-3 flex items-center justify-between transition-all duration-200 active:scale-[0.98] relative overflow-hidden group block"
                                 >
-                                  <span className="font-semibold">
-                                    {lesson.title}
-                                  </span>
-                                  {done && (
-                                    <span className="ml-2 text-sm text-pastel-primary-dark">
-                                      ✓ 完了
+                                  <div
+                                    className="absolute top-0 left-3 right-3 h-0.5 rounded-b-full opacity-0 group-hover:opacity-70 transition-opacity"
+                                    style={{ background: "linear-gradient(90deg, transparent, #58cc02, transparent)" }}
+                                    aria-hidden
+                                  />
+                                  <span className="font-semibold text-sm text-pastel-ink">{lesson.title}</span>
+                                  {done ? (
+                                    <span
+                                      className="text-pastel-primary font-bold"
+                                      style={{ textShadow: "0 0 8px rgba(88,204,2,0.6)" }}
+                                    >
+                                      ✓
                                     </span>
+                                  ) : (
+                                    <span className="text-pastel-primary/50 group-hover:text-pastel-primary transition-colors">›</span>
                                   )}
                                 </Link>
-                              )}
-                              {i < levelLessons.length - 1 && (
-                                <div
-                                  className="h-4 w-0.5 bg-pastel-border ml-6"
-                                  aria-hidden
-                                />
                               )}
                             </li>
                           );
                         })
                       ) : (
-                        <li className="rounded-xl border-2 border-dashed border-pastel-border bg-pastel-slate/30 px-4 py-3 text-sm text-pastel-ink/50">
-                          準備中
+                        <li className="neu-inset rounded-xl px-4 py-3">
+                          <span className="text-xs font-mono text-pastel-ink/40">// 準備中</span>
                         </li>
                       )}
                     </ul>

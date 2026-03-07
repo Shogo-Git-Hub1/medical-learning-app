@@ -40,6 +40,8 @@ const config: Config = {
           orange: "#FFC800",
           "orange-dark": "#E6B800",
         },
+        /** ニューモーフィズム背景 */
+        neu: "#E8ECF2",
         /** 藍色：クイズ画面の背景（視認性向上） */
         indigo: {
           quiz: "#1a365d",
@@ -129,6 +131,26 @@ const config: Config = {
           "40%": { transform: "scale(1.05) translateY(-2px)" },
           "70%": { transform: "scale(1.02) translateY(1px)" },
         },
+        /** 近未来UI: 下からフェードイン */
+        "fade-in-up": {
+          from: { opacity: "0", transform: "translateY(18px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
+        /** 近未来UI: カードのスケール付きフェードイン */
+        "card-enter": {
+          from: { opacity: "0", transform: "translateY(14px) scale(0.96)" },
+          to: { opacity: "1", transform: "translateY(0) scale(1)" },
+        },
+        /** 近未来UI: グリーングロウのパルス */
+        "pulse-glow": {
+          "0%, 100%": { boxShadow: "0 0 8px rgba(88,204,2,0.3), 4px 4px 8px rgba(197,202,209,0.7), -4px -4px 8px rgba(255,255,255,0.9)" },
+          "50%": { boxShadow: "0 0 22px rgba(88,204,2,0.65), 0 0 44px rgba(88,204,2,0.2), 4px 4px 8px rgba(197,202,209,0.7), -4px -4px 8px rgba(255,255,255,0.9)" },
+        },
+        /** 近未来UI: ヘッダースキャンライン */
+        "scan-h": {
+          "0%": { transform: "translateX(-100%)", opacity: "0.6" },
+          "100%": { transform: "translateX(300%)", opacity: "0" },
+        },
       },
       animation: {
         "feedback-pop": "feedback-pop 0.4s ease-out forwards",
@@ -143,6 +165,10 @@ const config: Config = {
         "character-skurun-happy": "character-skurun-happy 0.5s ease-out forwards",
         "character-idle-float": "character-idle-float 2.5s ease-in-out infinite",
         "character-shirin-bounce": "character-shirin-bounce 0.6s ease-out forwards",
+        "fade-in-up": "fade-in-up 0.5s cubic-bezier(0.22,1,0.36,1) forwards",
+        "card-enter": "card-enter 0.45s cubic-bezier(0.22,1,0.36,1) forwards",
+        "pulse-glow": "pulse-glow 2.8s ease-in-out infinite",
+        "scan-h": "scan-h 3.5s linear infinite",
       },
     },
   },
