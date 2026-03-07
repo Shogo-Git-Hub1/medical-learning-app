@@ -51,13 +51,13 @@ export const DEFAULT_THEME: SubjectTheme = {
 };
 
 // ─── Layout constants ──────────────────────────────────────────────────────────
-export const NODE_HEIGHT = 104;
+export const NODE_HEIGHT = 116;
 export const NODE_SIZE   = 64;
 export const SVG_W       = 300;
 export const BOTTOM_PAD  = 44;
 
-/** 8-step zigzag wave (normalized 0–1). */
-export const ZIGZAG = [0.12, 0.35, 0.5, 0.65, 0.88, 0.65, 0.5, 0.35] as const;
+/** 8-step zigzag wave (normalized 0–1): center → left → far-left → left → center → right → far-right → right */
+export const ZIGZAG = [0.5, 0.28, 0.12, 0.28, 0.5, 0.72, 0.88, 0.72] as const;
 
 export function getXRatio(index: number): number {
   return ZIGZAG[index % ZIGZAG.length];
@@ -98,8 +98,14 @@ export function LessonNode({ lesson, index, done, locked, isCurrent, theme, onTa
   const nodeTop = index * NODE_HEIGHT + (NODE_HEIGHT - NODE_SIZE) / 2;
 
   // ── Label side ─────────────────────────────────────────────────────────────
-  const labelSide: "right" | "left" | "below" =
-    xRatio < 0.45 ? "right" : xRatio > 0.55 ? "left" : "below";
+  // For center nodes (xRatio ≈ 0.5), place the label opposite to the direction
+  // of the next node so it never overlaps the connecting path.
+  const nextXRatio = getXRatio(index + 1);
+  const labelSide: "right" | "left" =
+    xRatio < 0.45 ? "right"
+    : xRatio > 0.55 ? "left"
+    : nextXRatio > 0.5 ? "left"   // center node, next goes right → label on left
+    : "right";                     // center node, next goes left  → label on right
 
   const labelBase: React.CSSProperties = {
     position: "absolute",
@@ -110,14 +116,12 @@ export function LessonNode({ lesson, index, done, locked, isCurrent, theme, onTa
     color: locked ? "#A0AEC0" : theme.border,
     pointerEvents: "none",
     zIndex: 3,
-    maxWidth: 76,
+    maxWidth: 90,
   };
   const labelStyle: React.CSSProperties =
     labelSide === "right"
       ? { ...labelBase, left: `calc(${xRatio * 100}% + ${NODE_SIZE / 2 + 6}px)`, top: nodeTop + NODE_SIZE / 2, transform: "translateY(-50%)" }
-      : labelSide === "left"
-      ? { ...labelBase, right: `calc(${(1 - xRatio) * 100}% + ${NODE_SIZE / 2 + 6}px)`, top: nodeTop + NODE_SIZE / 2, transform: "translateY(-50%)", textAlign: "right" }
-      : { ...labelBase, left: `calc(${xRatio * 100}% - 38px)`, top: nodeTop + NODE_SIZE + 5, textAlign: "center", width: 76 };
+      : { ...labelBase, right: `calc(${(1 - xRatio) * 100}% + ${NODE_SIZE / 2 + 6}px)`, top: nodeTop + NODE_SIZE / 2, transform: "translateY(-50%)", textAlign: "right" };
 
   // ── Circle style ───────────────────────────────────────────────────────────
   const circleStyle: React.CSSProperties = done
@@ -317,7 +321,7 @@ export function LessonPreviewSheet({
 
   const handleStart = () => {
     onClose();
-    if (data) router.push(`/lesson/${data.lesson.id}?from=/roadmap`);
+    if (data) router.push(`/lesson/${data.lesson.id}?from=/subjects`);
   };
 
   if (!data) return null;

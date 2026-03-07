@@ -4,9 +4,9 @@ export const dynamic = "force-static";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "医療学習アプリ",
-    short_name: "医療学習",
-    description: "資格・試験対策 × 科目別で学ぶ、継続したくなる医療系学習",
+    name: "MediSpark",
+    short_name: "MediSpark",
+    description: "医学の学習に火をつける。科目別で学ぶ、継続したくなる医療系学習アプリ",
     start_url: "/",
     display: "standalone",
     background_color: "#f8fafc",

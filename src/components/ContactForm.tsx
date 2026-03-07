@@ -104,7 +104,7 @@ export function ContactForm() {
     const subject =
       formType === REPORT_TYPE
         ? `[問題報告] ${reportReason === REPORT_REASON_WRONG ? "内容の誤り" : reportReason === REPORT_REASON_TYPO ? "誤字脱字" : "その他"}`
-        : "[お問い合わせ] 医療学習アプリ";
+        : "[お問い合わせ] MediSpark";
     const mailBody = buildMailBody({
       name,
       email,

@@ -19,7 +19,7 @@ interface Props {
 }
 
 export function SubjectRoadmap({ subject }: Props) {
-  const router     = useRouter();
+  const router = useRouter();
   const { progress } = useProgress();
   const grouped    = getLessonsGroupedBySubject();
   const lessons    = grouped[subject] ?? [];
@@ -70,7 +70,7 @@ export function SubjectRoadmap({ subject }: Props) {
   if (lessons.length === 0) {
     return (
       <div className="space-y-4">
-        <SubjectHeader subject={subject} completedCount={0} total={0} theme={theme} onBack={() => router.back()} />
+        <SubjectHeader subject={subject} completedCount={0} total={0} theme={theme} onBack={() => router.push("/subjects")} />
         <div className="neu-inset rounded-2xl p-8 text-center">
           <p className="font-mono text-sm text-pastel-ink/50">{"// この科目にはまだレッスンがありません"}</p>
         </div>
@@ -87,7 +87,7 @@ export function SubjectRoadmap({ subject }: Props) {
           completedCount={completedCount}
           total={lessons.length}
           theme={theme}
-          onBack={() => router.back()}
+          onBack={() => router.push("/subjects")}
         />
 
         {/* ── Roadmap nodes ────────────────────────────────────────────── */}
@@ -148,7 +148,7 @@ function SubjectHeader({
           <svg viewBox="0 0 24 24" width={18} height={18} fill="none" aria-hidden>
             <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
           </svg>
-          ロードマップに戻る
+          科目一覧に戻る
         </button>
 
         {/* Subject title row */}

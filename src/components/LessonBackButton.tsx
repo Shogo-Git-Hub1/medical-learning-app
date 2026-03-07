@@ -5,10 +5,10 @@ import { useSearchParams } from "next/navigation";
 
 /** `from` クエリパラメータからラベルを決定する（オープンリダイレクト対策あり） */
 function resolveBack(from: string): { href: string; label: string } {
-  if (!from.startsWith("/")) return { href: "/roadmap", label: "ロードマップ" };
+  if (!from.startsWith("/")) return { href: "/subjects", label: "科目一覧" };
   if (from.startsWith("/subjects")) return { href: from, label: "科目一覧" };
   if (from.startsWith("/browse"))   return { href: "/browse", label: "ブラウズ" };
-  return { href: "/roadmap", label: "ロードマップ" };
+  return { href: "/subjects", label: "科目一覧" };
 }
 
 export function LessonBackButton() {

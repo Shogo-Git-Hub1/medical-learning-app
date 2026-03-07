@@ -32,14 +32,14 @@ const NAV_ITEMS = [
     ),
   },
   {
-    href: "/roadmap",
-    label: "マップ",
+    href: "/profile",
+    label: "プロフィール",
     color: "#4DB6AC",
     border: "#00695C",
     icon: (active: boolean) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.5 : 1.8} strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3V6z" />
-        <path d="M9 3v15M15 6v15" />
+        <circle cx="12" cy="8" r="4" />
+        <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
       </svg>
     ),
   },

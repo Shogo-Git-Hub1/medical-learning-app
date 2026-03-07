@@ -48,8 +48,8 @@ export function SubjectGrid() {
 
             {/* NEXT badge */}
             {isNext && (
-              <span className="absolute top-2 left-2 text-[8px] font-bold font-mono tracking-wider px-1.5 py-0.5 rounded-full bg-white/30 text-white">
-                NEXT
+              <span className="absolute top-2 left-2 text-[8px] font-bold font-nunito tracking-wider px-1.5 py-0.5 rounded-full bg-white/30 text-white">
+                おすすめ
               </span>
             )}
 

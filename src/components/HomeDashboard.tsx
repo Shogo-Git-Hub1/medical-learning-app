@@ -353,7 +353,7 @@ function SubjectShortcuts() {
           }}
         >
           <p className="text-sm font-bold font-nunito" style={{ color: "var(--pastel-primary)" }}>
-            {lastSubject}ロードマップ
+            {lastSubject} を続ける
           </p>
         </Link>
       )}
@@ -418,16 +418,7 @@ export function HomeDashboard() {
       {/* ── Subject shortcuts ────────────────────────────────────────── */}
       <SubjectShortcuts />
 
-      {/* ── Info note ────────────────────────────────────────────────── */}
-      <section
-        className="neu-inset rounded-2xl p-4 animate-fade-in-up"
-        style={{ animationDelay: "300ms", animationFillMode: "both" }}
-      >
-        <p className="font-mono text-xs text-pastel-primary/70 mb-1">{"// INFO"}</p>
-        <p className="text-sm text-pastel-ink/60">
-          ストリーク・デイリーミッション・レベル/XP・ロードマップ・間隔反復の5つで継続しやすい学習をサポートします。
-        </p>
-      </section>
+
     </div>
   );
 }
