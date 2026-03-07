@@ -2,11 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useProgress } from "@/hooks/useProgress";
-import { getLessonsGroupedBySubject } from "@/services/lessonService";
+import { useProgressContext } from "@/contexts/ProgressContext";
+import { getLessonsGroupedBySubject, getCurrentLessonIndex } from "@/services/lessonService";
+import { SUBJECT_THEMES, DEFAULT_THEME } from "@/data/subjectThemes";
 import {
-  SUBJECT_THEMES,
-  DEFAULT_THEME,
   NODE_HEIGHT,
   SubjectNodes,
   LessonPreviewSheet,
@@ -20,7 +19,7 @@ interface Props {
 
 export function SubjectRoadmap({ subject }: Props) {
   const router = useRouter();
-  const { progress } = useProgress();
+  const { progress } = useProgressContext();
   const grouped    = getLessonsGroupedBySubject();
   const lessons    = grouped[subject] ?? [];
   const theme      = SUBJECT_THEMES[subject] ?? DEFAULT_THEME;
@@ -35,14 +34,7 @@ export function SubjectRoadmap({ subject }: Props) {
   const nodesContainerRef = useRef<HTMLDivElement>(null);
 
   const completedCount = lessons.filter((l) => completedIds.includes(l.id)).length;
-
-  // Recompute states to find currentIndex (same logic as SubjectNodes)
-  const states = lessons.map((lesson, i) => {
-    const done        = completedIds.includes(lesson.id);
-    const allPrevDone = i === 0 || lessons.slice(0, i).every((l) => completedIds.includes(l.id));
-    return { done, locked: !allPrevDone };
-  });
-  const currentIndex = states.findIndex((s) => !s.done && !s.locked);
+  const currentIndex = getCurrentLessonIndex(lessons, completedIds);
 
   useEffect(() => {
     // Nothing to scroll to if every lesson is completed or all are locked
@@ -64,7 +56,7 @@ export function SubjectRoadmap({ subject }: Props) {
     }, 380); // let the entrance animations settle first
 
     return () => clearTimeout(timer);
-  }, []); // run once on mount — eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentIndex]);
 
   // ── Empty state ─────────────────────────────────────────────────────────
   if (lessons.length === 0) {

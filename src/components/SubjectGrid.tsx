@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useProgress } from "@/hooks/useProgress";
+import { useProgressContext } from "@/contexts/ProgressContext";
 import { getLessonsGroupedBySubject, SUBJECT_DISPLAY_ORDER } from "@/services/lessonService";
 import { SUBJECT_THEMES, DEFAULT_THEME } from "@/data/subjectThemes";
 
 export function SubjectGrid() {
-  const { progress } = useProgress();
+  const { progress } = useProgressContext();
   const grouped = getLessonsGroupedBySubject();
 
   // Find the first subject that still has uncompleted lessons → "next recommended"

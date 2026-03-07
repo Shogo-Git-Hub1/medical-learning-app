@@ -1,6 +1,6 @@
-import type { QuestionDatabase } from "@/types";
+import type { QuestionDatabase, Lesson } from "@/types";
 import { getToday } from "@/lib/progress";
-import type { UserProgress } from "@/lib/progress";
+import type { UserProgress, LastLessonResult } from "@/lib/progress";
 import { subjectQuestions, subjectLessons, SUBJECT_DISPLAY_ORDER } from "./subjects";
 
 /**
@@ -93,6 +93,45 @@ export function getLessonsFiltered(subject: string | null, examTag: string | nul
   return list;
 }
 
+/**
+ * ロードマップ順で、指定レッスンの直後のレッスンを返す。
+ * review や存在しない lessonId の場合は null。最後のレッスンの次も null。
+ */
+export function getNextLessonAfter(lessonId: string): (typeof questionDb.lessons)[0] | null {
+  if (lessonId === "review") return null;
+  const grouped = getLessonsGroupedBySubject();
+  for (const subject of SUBJECT_DISPLAY_ORDER) {
+    const lessons = grouped[subject] ?? [];
+    const idx = lessons.findIndex((l) => l.id === lessonId);
+    if (idx !== -1 && idx < lessons.length - 1) return lessons[idx + 1];
+  }
+  return null;
+}
+
+export type LessonState = { done: boolean; locked: boolean };
+
+/**
+ * レッスン一覧と完了IDから、各レッスンの done / locked 状態を返す。
+ * SubjectRoadmap と SubjectNodes で同じロジックを共有する。
+ */
+export function getLessonStates(lessons: Lesson[], completedIds: string[]): LessonState[] {
+  return lessons.map((lesson, i) => {
+    const done = completedIds.includes(lesson.id);
+    const allPrevDone =
+      i === 0 || lessons.slice(0, i).every((l) => completedIds.includes(l.id));
+    return { done, locked: !allPrevDone };
+  });
+}
+
+/**
+ * 現在取り組むべきレッスンのインデックス（0-based）。
+ * すべて完了またはすべてロックの場合は -1。
+ */
+export function getCurrentLessonIndex(lessons: Lesson[], completedIds: string[]): number {
+  const states = getLessonStates(lessons, completedIds);
+  return states.findIndex((s) => !s.done && !s.locked);
+}
+
 /** 実際に使われている科目一覧（SUBJECT_DISPLAY_ORDER 順） */
 export function getSubjectsInUse(): string[] {
   const set = new Set(questionDb.lessons.map((l) => l.subject).filter(Boolean));
@@ -103,6 +142,75 @@ export function getSubjectsInUse(): string[] {
 export function getExamTagsInUse(): string[] {
   const set = new Set(questionDb.lessons.map((l) => l.examTag).filter(Boolean));
   return [...set] as string[];
+}
+
+// ─── 推薦レッスン（今日のレッスン表示用） ───────────────────────────────────────
+export type Recommendation =
+  | { kind: "next" | "retry"; lesson: Lesson; subject: string; lastAccuracy?: number }
+  | { kind: "mastered"; subject: string; nextSubject: string | null }
+  | { kind: "allDone" };
+
+/**
+ * ロードマップ順で最初の未完了レッスンを返す。
+ */
+export function firstUncompleted(
+  progress: UserProgress,
+  grouped: Record<string, Lesson[]>
+): Recommendation {
+  for (const subject of SUBJECT_DISPLAY_ORDER) {
+    const lessons = grouped[subject] ?? [];
+    for (let i = 0; i < lessons.length; i++) {
+      if (progress.completedLessonIds.includes(lessons[i].id)) continue;
+      const allPrevDone =
+        i === 0 || lessons.slice(0, i).every((l) => progress.completedLessonIds.includes(l.id));
+      if (allPrevDone) return { kind: "next", lesson: lessons[i], subject };
+    }
+  }
+  return { kind: "allDone" };
+}
+
+/**
+ * 前回結果と進捗から、今日おすすめのレッスン（次・リトライ・科目修了・全完了）を返す。
+ */
+export function findRecommendedLesson(
+  progress: UserProgress,
+  lastResult: LastLessonResult | null
+): Recommendation {
+  const grouped = getLessonsGroupedBySubject();
+  if (!lastResult) return firstUncompleted(progress, grouped);
+
+  const { lessonId, accuracy } = lastResult;
+  let foundLesson: Lesson | null = null;
+  let foundSubject: string | null = null;
+  for (const subject of SUBJECT_DISPLAY_ORDER) {
+    const lesson = (grouped[subject] ?? []).find((l) => l.id === lessonId);
+    if (lesson) {
+      foundLesson = lesson;
+      foundSubject = subject;
+      break;
+    }
+  }
+
+  if (!foundLesson || !foundSubject) return firstUncompleted(progress, grouped);
+
+  if (accuracy < 0.8) {
+    if (progress.completedLessonIds.includes(foundLesson.id)) {
+      return firstUncompleted(progress, grouped);
+    }
+    return { kind: "retry", lesson: foundLesson, subject: foundSubject, lastAccuracy: accuracy };
+  }
+
+  const nextLesson = getNextLessonAfter(lessonId);
+  if (!nextLesson) {
+    const nextSubjectIdx = SUBJECT_DISPLAY_ORDER.findIndex((s) => s === foundSubject) + 1;
+    const nextSubject =
+      nextSubjectIdx < SUBJECT_DISPLAY_ORDER.length ? SUBJECT_DISPLAY_ORDER[nextSubjectIdx] : null;
+    return { kind: "mastered", subject: foundSubject, nextSubject };
+  }
+  if (progress.completedLessonIds.includes(nextLesson.id)) {
+    return firstUncompleted(progress, grouped);
+  }
+  return { kind: "next", lesson: nextLesson, subject: foundSubject };
 }
 
 export { SUBJECT_DISPLAY_ORDER };

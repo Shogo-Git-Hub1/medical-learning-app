@@ -9,10 +9,10 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Lesson } from "@/types";
 import type { SubjectTheme } from "@/data/subjectThemes";
+import { getLessonStates, getCurrentLessonIndex } from "@/services/lessonService";
 
-// 型・定数は "use client" 不要な共有ファイルから再エクスポート
+// 型は "use client" 不要な共有ファイルから再エクスポート（テーマ定数は @/data/subjectThemes から直接 import する方針）
 export type { SubjectTheme } from "@/data/subjectThemes";
-export { SUBJECT_THEMES, DEFAULT_THEME } from "@/data/subjectThemes";
 
 export type PreviewData = {
   lesson: Lesson;
@@ -184,13 +184,8 @@ export interface SubjectNodesProps {
 export function SubjectNodes({ lessons, completedIds, theme, onNodeTap, containerRef }: SubjectNodesProps) {
   const completedCount = lessons.filter((l) => completedIds.includes(l.id)).length;
   const containerH     = lessons.length * NODE_HEIGHT + BOTTOM_PAD;
-
-  const states = lessons.map((lesson, i) => {
-    const done        = completedIds.includes(lesson.id);
-    const allPrevDone = i === 0 || lessons.slice(0, i).every((l) => completedIds.includes(l.id));
-    return { done, locked: !allPrevDone };
-  });
-  const currentIndex = states.findIndex((s) => !s.done && !s.locked);
+  const states        = getLessonStates(lessons, completedIds);
+  const currentIndex  = getCurrentLessonIndex(lessons, completedIds);
 
   const fullPath     = buildSvgPath(lessons.length);
   const progressPath = completedCount >= 2 ? buildSvgPath(completedCount) : null;

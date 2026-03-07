@@ -1,12 +1,12 @@
 "use client";
 
-import { useProgress } from "@/hooks/useProgress";
+import { useProgressContext } from "@/contexts/ProgressContext";
 
 /**
  * 進捗の読み込み失敗・保存失敗を画面上部に表示し、閉じられるようにする。
  */
 export function ProgressErrorBanner() {
-  const { loadError, saveError, clearLoadError, clearSaveError } = useProgress();
+  const { loadError, saveError, clearLoadError, clearSaveError } = useProgressContext();
 
   if (!loadError && !saveError) return null;
 

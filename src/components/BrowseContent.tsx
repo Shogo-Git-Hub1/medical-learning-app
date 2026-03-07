@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { useProgress } from "@/hooks/useProgress";
+import { useProgressContext } from "@/contexts/ProgressContext";
 import { PushButton } from "@/components/ui/PushButton";
 import {
   getLessonsFiltered,
@@ -12,7 +12,7 @@ import {
 } from "@/services/lessonService";
 
 export function BrowseContent() {
-  const { progress } = useProgress();
+  const { progress } = useProgressContext();
   const [subject, setSubject] = useState<string | null>(null);
   const [examTag, setExamTag] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");

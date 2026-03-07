@@ -33,18 +33,6 @@ const NAV_ITEMS = [
     ),
   },
   {
-    href: "/profile",
-    label: "プロフィール",
-    color: "#4DB6AC",
-    border: "#00695C",
-    icon: (active: boolean) => (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.5 : 1.8} strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="8" r="4" />
-        <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-      </svg>
-    ),
-  },
-  {
     href: "/browse",
     label: "ブラウズ",
     color: "#CE93D8",
@@ -53,6 +41,18 @@ const NAV_ITEMS = [
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.5 : 1.8} strokeLinecap="round" strokeLinejoin="round">
         <circle cx="11" cy="11" r="8" />
         <path d="M21 21l-4.35-4.35" />
+      </svg>
+    ),
+  },
+  {
+    href: "/profile",
+    label: "プロフィール",
+    color: "#4DB6AC",
+    border: "#00695C",
+    icon: (active: boolean) => (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.5 : 1.8} strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="8" r="4" />
+        <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
       </svg>
     ),
   },

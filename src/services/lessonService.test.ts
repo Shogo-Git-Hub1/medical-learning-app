@@ -5,6 +5,11 @@ import {
   getLessonWithQuestions,
   getAllLessons,
   getLessonsGroupedBySubject,
+  getNextLessonAfter,
+  getLessonStates,
+  getCurrentLessonIndex,
+  firstUncompleted,
+  findRecommendedLesson,
   SUBJECT_DISPLAY_ORDER,
 } from "./lessonService";
 import type { UserProgress } from "@/lib/progress";
@@ -115,6 +120,107 @@ describe("lessonService", () => {
       expect(keys.length).toBeGreaterThan(0);
       for (let i = 0; i < keys.length; i++) {
         expect(keys[i]).toBe(SUBJECT_DISPLAY_ORDER[i]);
+      }
+    });
+  });
+
+  describe("getNextLessonAfter", () => {
+    it("review の場合は null", () => {
+      expect(getNextLessonAfter("review")).toBeNull();
+    });
+    it("存在しない lessonId の場合は null", () => {
+      expect(getNextLessonAfter("no-such-lesson")).toBeNull();
+    });
+    it("ロードマップ順で次のレッスンを返す", () => {
+      const all = getAllLessons();
+      expect(all.length).toBeGreaterThan(1);
+      const next = getNextLessonAfter(all[0].id);
+      expect(next).not.toBeNull();
+      expect(next!.id).toBe(all[1].id);
+    });
+    it("最後のレッスンの場合は null", () => {
+      const all = getAllLessons();
+      const lastId = all[all.length - 1].id;
+      expect(getNextLessonAfter(lastId)).toBeNull();
+    });
+  });
+
+  describe("getLessonStates / getCurrentLessonIndex", () => {
+    it("未完了のレッスンが先頭なら currentIndex は 0", () => {
+      const all = getAllLessons();
+      const first = all.slice(0, 3);
+      expect(getCurrentLessonIndex(first, [])).toBe(0);
+      const states = getLessonStates(first, []);
+      expect(states[0]).toEqual({ done: false, locked: false });
+      expect(states[1]).toEqual({ done: false, locked: true });
+    });
+    it("すべて完了なら currentIndex は -1", () => {
+      const all = getAllLessons();
+      const first = all.slice(0, 2);
+      const completedIds = first.map((l) => l.id);
+      expect(getCurrentLessonIndex(first, completedIds)).toBe(-1);
+      const states = getLessonStates(first, completedIds);
+      expect(states.every((s) => s.done)).toBe(true);
+    });
+    it("1つ目完了なら currentIndex は 1", () => {
+      const all = getAllLessons();
+      const first = all.slice(0, 3);
+      const completedIds = [first[0].id];
+      expect(getCurrentLessonIndex(first, completedIds)).toBe(1);
+      const states = getLessonStates(first, completedIds);
+      expect(states[0]).toEqual({ done: true, locked: false });
+      expect(states[1]).toEqual({ done: false, locked: false });
+      expect(states[2]).toEqual({ done: false, locked: true });
+    });
+  });
+
+  describe("firstUncompleted / findRecommendedLesson", () => {
+    const emptyProgress: UserProgress = {
+      version: 1,
+      lastStudyDate: "",
+      streakDays: 0,
+      dailyGoal: 5,
+      dailyAnswered: 0,
+      dailyResetDate: "",
+      totalXP: 0,
+      completedLessonIds: [],
+      questionReviews: {},
+    };
+
+    it("未完了がなければ allDone", () => {
+      const all = getAllLessons();
+      const completedIds = all.map((l) => l.id);
+      const progress: UserProgress = { ...emptyProgress, completedLessonIds: completedIds };
+      const grouped = getLessonsGroupedBySubject();
+      const rec = firstUncompleted(progress, grouped);
+      expect(rec.kind).toBe("allDone");
+    });
+
+    it("未完了があれば kind が next で最初の未完了レッスンを返す", () => {
+      const grouped = getLessonsGroupedBySubject();
+      const rec = firstUncompleted(emptyProgress, grouped);
+      expect(rec.kind).toBe("next");
+      expect("lesson" in rec && "subject" in rec).toBe(true);
+      if (rec.kind === "next") {
+        expect(rec.lesson).toBeDefined();
+        expect(SUBJECT_DISPLAY_ORDER).toContain(rec.subject);
+      }
+    });
+
+    it("lastResult なしなら firstUncompleted と同じ", () => {
+      const rec = findRecommendedLesson(emptyProgress, null);
+      expect(rec.kind).toBe("next");
+    });
+
+    it("正答率 80% 未満なら retry", () => {
+      const all = getAllLessons();
+      const firstId = all[0].id;
+      const progress: UserProgress = { ...emptyProgress, completedLessonIds: [] };
+      const rec = findRecommendedLesson(progress, { lessonId: firstId, accuracy: 0.5 });
+      expect(rec.kind).toBe("retry");
+      if (rec.kind === "retry") {
+        expect(rec.lesson.id).toBe(firstId);
+        expect(rec.lastAccuracy).toBe(0.5);
       }
     });
   });

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
-import { useProgress } from "@/hooks/useProgress";
+import { useProgressContext } from "@/contexts/ProgressContext";
 
 type NavItem = {
   href: string;
@@ -61,7 +61,7 @@ export function DesktopSidebar() {
   const [pathname, setPathname] = useState("");
   useEffect(() => { setPathname(rawPathname); }, [rawPathname]);
 
-  const { progress, level, xpInLevel, xpNeededForNext } = useProgress();
+  const { progress, level, xpInLevel, xpNeededForNext } = useProgressContext();
   const xpPct = Math.round((xpInLevel / (xpInLevel + xpNeededForNext)) * 100);
 
   const isActive = (href: string) => {

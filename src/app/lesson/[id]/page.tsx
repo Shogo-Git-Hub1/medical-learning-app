@@ -2,6 +2,8 @@ import { Suspense } from "react";
 import { getLessonWithQuestions, getAllLessons } from "@/services/lessonService";
 import { LessonView } from "@/components/LessonView";
 import { LessonBackButton } from "@/components/LessonBackButton";
+import { NotFoundCard } from "@/components/ui/NotFoundCard";
+import { CardWithAccent } from "@/components/ui/CardWithAccent";
 
 export function generateStaticParams() {
   return getAllLessons().map((lesson) => ({ id: lesson.id }));
@@ -17,20 +19,11 @@ export default async function LessonPage({
 
   if (!data) {
     return (
-      <div className="space-y-6 animate-fade-in-up">
-        <div className="neu-card rounded-2xl p-8 text-center relative overflow-hidden">
-          <div
-            className="absolute top-0 left-6 right-6 h-0.5 rounded-b-full"
-            style={{ background: "linear-gradient(90deg, transparent, rgba(232,100,100,0.6), transparent)" }}
-            aria-hidden
-          />
-          <p className="font-mono text-xs text-pastel-ink/40 mb-2">{"// 404 NOT FOUND"}</p>
-          <h1 className="text-lg font-bold text-pastel-ink">レッスンが見つかりません</h1>
-        </div>
+      <NotFoundCard title="レッスンが見つかりません" subLabel="// 404 NOT FOUND">
         <Suspense>
           <LessonBackButton />
         </Suspense>
-      </div>
+      </NotFoundCard>
     );
   }
 
@@ -39,12 +32,7 @@ export default async function LessonPage({
   return (
     <div className="space-y-5 animate-fade-in-up">
       {/* ─── レッスンヘッダーカード ─────────────────────────── */}
-      <div className="neu-card rounded-2xl px-5 py-4 relative overflow-hidden">
-        <div
-          className="absolute top-0 left-6 right-6 h-0.5 rounded-b-full"
-          style={{ background: "linear-gradient(90deg, transparent, rgba(88,204,2,0.55), transparent)" }}
-          aria-hidden
-        />
+      <CardWithAccent variant="success" container="card" className="px-5 py-4">
         <div className="flex items-center gap-3">
           {/* useSearchParams を使うため Suspense でラップ */}
           <Suspense
@@ -75,7 +63,7 @@ export default async function LessonPage({
             {questions.length}問
           </div>
         </div>
-      </div>
+      </CardWithAccent>
 
       {/* ─── クイズ本体 ─────────────────────────────────────── */}
       <LessonView lesson={lesson} questions={questions} />

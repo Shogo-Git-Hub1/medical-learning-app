@@ -42,31 +42,12 @@ export function getDefaultProgress(): UserProgress {
   return { ...DEFAULT };
 }
 
-/** 古い保存データを現在のスキーマに変換する（単体テスト用に export） */
-export function migrateProgress(parsed: Record<string, unknown>): UserProgress {
-  const version = typeof parsed.version === "number" ? parsed.version : 0;
+/**
+ * パース済みオブジェクトを現在スキーマの UserProgress にマッピングする。
+ * migrateProgress の version 分岐で共通利用する。
+ */
+function parsedToUserProgress(parsed: Record<string, unknown>): UserProgress {
   const base = { ...DEFAULT };
-
-  if (version >= 1) {
-    return {
-      ...base,
-      version: PROGRESS_SCHEMA_VERSION,
-      lastStudyDate: typeof parsed.lastStudyDate === "string" ? parsed.lastStudyDate : base.lastStudyDate,
-      streakDays: typeof parsed.streakDays === "number" ? parsed.streakDays : base.streakDays,
-      dailyGoal: typeof parsed.dailyGoal === "number" ? parsed.dailyGoal : base.dailyGoal,
-      dailyAnswered: typeof parsed.dailyAnswered === "number" ? parsed.dailyAnswered : base.dailyAnswered,
-      dailyResetDate: typeof parsed.dailyResetDate === "string" ? parsed.dailyResetDate : base.dailyResetDate,
-      totalXP: typeof parsed.totalXP === "number" ? parsed.totalXP : base.totalXP,
-      completedLessonIds: Array.isArray(parsed.completedLessonIds) && parsed.completedLessonIds.every((id): id is string => typeof id === "string")
-        ? parsed.completedLessonIds
-        : base.completedLessonIds,
-      questionReviews: typeof parsed.questionReviews === "object" && parsed.questionReviews !== null && !Array.isArray(parsed.questionReviews)
-        ? (parsed.questionReviews as Record<string, QuestionReview>)
-        : base.questionReviews,
-    };
-  }
-
-  // version 0: 旧形式（version フィールドなし）
   return {
     ...base,
     version: PROGRESS_SCHEMA_VERSION,
@@ -76,13 +57,23 @@ export function migrateProgress(parsed: Record<string, unknown>): UserProgress {
     dailyAnswered: typeof parsed.dailyAnswered === "number" ? parsed.dailyAnswered : base.dailyAnswered,
     dailyResetDate: typeof parsed.dailyResetDate === "string" ? parsed.dailyResetDate : base.dailyResetDate,
     totalXP: typeof parsed.totalXP === "number" ? parsed.totalXP : base.totalXP,
-    completedLessonIds: Array.isArray(parsed.completedLessonIds) && parsed.completedLessonIds.every((id): id is string => typeof id === "string")
-      ? parsed.completedLessonIds
-      : base.completedLessonIds,
-    questionReviews: typeof parsed.questionReviews === "object" && parsed.questionReviews !== null && !Array.isArray(parsed.questionReviews)
-      ? (parsed.questionReviews as Record<string, QuestionReview>)
-      : base.questionReviews,
+    completedLessonIds:
+      Array.isArray(parsed.completedLessonIds) &&
+      parsed.completedLessonIds.every((id): id is string => typeof id === "string")
+        ? parsed.completedLessonIds
+        : base.completedLessonIds,
+    questionReviews:
+      typeof parsed.questionReviews === "object" &&
+      parsed.questionReviews !== null &&
+      !Array.isArray(parsed.questionReviews)
+        ? (parsed.questionReviews as Record<string, QuestionReview>)
+        : base.questionReviews,
   };
+}
+
+/** 古い保存データを現在のスキーマに変換する（単体テスト用に export） */
+export function migrateProgress(parsed: Record<string, unknown>): UserProgress {
+  return parsedToUserProgress(parsed);
 }
 
 export type LoadProgressResult =
@@ -218,6 +209,60 @@ export function getComboMultiplier(combo: number): number {
 export function getXPForCorrect(combo: number): number {
   const mult = getComboMultiplier(combo);
   return Math.round(XP_PER_CORRECT * mult);
+}
+
+const MIN_INTERVAL = 1;
+const MAX_INTERVAL = 21;
+
+/**
+ * 1問の解答を反映した新しい UserProgress を返す純粋関数。
+ * 復習間隔・次回復習日・ストリーク・デイリー・XP を計算する。
+ * 保存やエラー状態の更新は呼び出し側（ProgressContext）が行う。
+ */
+export function applyAnswerToProgress(
+  progress: UserProgress,
+  questionId: string,
+  correct: boolean,
+  combo: number,
+  today: string
+): UserProgress {
+  const prevReview = progress.questionReviews[questionId];
+  const prevInterval = prevReview?.interval ?? 0;
+  let nextInterval: number;
+  let nextReview: string;
+  if (correct) {
+    nextInterval = prevInterval <= 0 ? MIN_INTERVAL : Math.min(prevInterval * 2, MAX_INTERVAL);
+    const d = new Date(today);
+    d.setDate(d.getDate() + nextInterval);
+    nextReview = d.toISOString().slice(0, 10);
+  } else {
+    nextInterval = MIN_INTERVAL;
+    const d = new Date(today);
+    d.setDate(d.getDate() + 1);
+    nextReview = d.toISOString().slice(0, 10);
+  }
+  const last = progress.lastStudyDate ? new Date(progress.lastStudyDate) : null;
+  const lastDay = last ? last.toISOString().slice(0, 10) : "";
+  let streak = progress.streakDays;
+  if (today !== lastDay) {
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().slice(0, 10);
+    streak = lastDay === yesterdayStr ? progress.streakDays + 1 : 1;
+  }
+  const xpGain = correct ? getXPForCorrect(combo) : 0;
+  return {
+    ...progress,
+    lastStudyDate: today,
+    streakDays: streak,
+    dailyAnswered: progress.dailyResetDate === today ? progress.dailyAnswered + 1 : 1,
+    dailyResetDate: progress.dailyResetDate || today,
+    totalXP: progress.totalXP + xpGain,
+    questionReviews: {
+      ...progress.questionReviews,
+      [questionId]: { nextReview, interval: nextInterval },
+    },
+  };
 }
 
 /** レベル N に必要な累計 XP: 100 * (N-1) から 100*N - 1 までがレベル N */

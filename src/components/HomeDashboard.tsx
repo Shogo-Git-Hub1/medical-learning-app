@@ -2,88 +2,18 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { useProgress } from "@/hooks/useProgress";
-import { getLessonsGroupedBySubject, SUBJECT_DISPLAY_ORDER } from "@/services/lessonService";
+import { useProgressContext } from "@/contexts/ProgressContext";
+import {
+  getLessonsGroupedBySubject,
+  getDueReviewQuestionIdsThatExist,
+  findRecommendedLesson,
+} from "@/services/lessonService";
 import { SUBJECT_THEMES, DEFAULT_THEME } from "@/data/subjectThemes";
 import { NavigatorsImage } from "@/components/CharacterAvatar";
 import { CharacterLine } from "@/components/CharacterLine";
 import { getLastSubject, getLastLessonResult } from "@/lib/progress";
-import { getDueReviewQuestionIdsThatExist } from "@/services/lessonService";
-import type { LastLessonResult } from "@/lib/progress";
+import type { UserProgress, LastLessonResult } from "@/lib/progress";
 import type { Lesson } from "@/types";
-import type { UserProgress } from "@/lib/progress";
-
-// ─── Recommendation logic ──────────────────────────────────────────────────────
-type Recommendation =
-  | { kind: "next" | "retry"; lesson: Lesson; subject: string; lastAccuracy?: number }
-  | { kind: "mastered"; subject: string; nextSubject: string | null }
-  | { kind: "allDone" };
-
-function firstUncompleted(
-  progress: UserProgress,
-  grouped: Record<string, Lesson[]>
-): Recommendation {
-  for (const subject of SUBJECT_DISPLAY_ORDER) {
-    const lessons = grouped[subject] ?? [];
-    for (let i = 0; i < lessons.length; i++) {
-      if (progress.completedLessonIds.includes(lessons[i].id)) continue;
-      const allPrevDone =
-        i === 0 || lessons.slice(0, i).every((l) => progress.completedLessonIds.includes(l.id));
-      if (allPrevDone) return { kind: "next", lesson: lessons[i], subject };
-    }
-  }
-  return { kind: "allDone" };
-}
-
-function findRecommendedLesson(
-  progress: UserProgress,
-  lastResult: LastLessonResult | null
-): Recommendation {
-  const grouped = getLessonsGroupedBySubject();
-
-  if (!lastResult) return firstUncompleted(progress, grouped);
-
-  const { lessonId, accuracy } = lastResult;
-
-  // 前回レッスンの科目を特定
-  let foundLesson: Lesson | null = null;
-  let foundSubject: string | null = null;
-  for (const subject of SUBJECT_DISPLAY_ORDER) {
-    const lesson = (grouped[subject] ?? []).find((l) => l.id === lessonId);
-    if (lesson) { foundLesson = lesson; foundSubject = subject; break; }
-  }
-
-  if (!foundLesson || !foundSubject) return firstUncompleted(progress, grouped);
-
-  // 正答率 < 80% → 同じレッスンをリトライ
-  // ただし既に完了済みならフォールバック（一般的な学習アプリの方式）
-  if (accuracy < 0.8) {
-    if (progress.completedLessonIds.includes(foundLesson.id)) {
-      return firstUncompleted(progress, grouped);
-    }
-    return { kind: "retry", lesson: foundLesson, subject: foundSubject, lastAccuracy: accuracy };
-  }
-
-  // 正答率 >= 80% → 同じ科目の次のレッスンへ
-  const subjectLessons = grouped[foundSubject] ?? [];
-  const currentIdx = subjectLessons.findIndex((l) => l.id === lessonId);
-
-  if (currentIdx === -1 || currentIdx >= subjectLessons.length - 1) {
-    // 科目修得: 次の科目を探す
-    const nextSubjectIdx = SUBJECT_DISPLAY_ORDER.findIndex((s) => s === foundSubject) + 1;
-    const nextSubject = nextSubjectIdx < SUBJECT_DISPLAY_ORDER.length
-      ? SUBJECT_DISPLAY_ORDER[nextSubjectIdx]
-      : null;
-    return { kind: "mastered", subject: foundSubject, nextSubject };
-  }
-
-  const nextLesson = subjectLessons[currentIdx + 1];
-  // 推薦レッスンが既に完了済みならフォールバック
-  if (progress.completedLessonIds.includes(nextLesson.id)) {
-    return firstUncompleted(progress, grouped);
-  }
-  return { kind: "next", lesson: nextLesson, subject: foundSubject };
-}
 
 // ─── StatCard ──────────────────────────────────────────────────────────────────
 type StatCardProps = {
@@ -374,7 +304,7 @@ function SubjectShortcuts() {
 
 // ─── HomeDashboard ─────────────────────────────────────────────────────────────
 export function HomeDashboard() {
-  const { progress, level, xpNeededForNext } = useProgress();
+  const { progress, level, xpNeededForNext } = useProgressContext();
 
   return (
     <div className="space-y-6">

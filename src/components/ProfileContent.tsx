@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useProgress } from "@/hooks/useProgress";
+import { useProgressContext } from "@/contexts/ProgressContext";
 import { getLessonsGroupedBySubject, SUBJECT_DISPLAY_ORDER } from "@/services/lessonService";
 import { SUBJECT_THEMES, DEFAULT_THEME } from "@/data/subjectThemes";
 
 export function ProfileContent() {
-  const { progress, level, xpInLevel, xpNeededForNext } = useProgress();
+  const { progress, level, xpInLevel, xpNeededForNext } = useProgressContext();
   const grouped = getLessonsGroupedBySubject();
 
   const totalLessons = SUBJECT_DISPLAY_ORDER.reduce(

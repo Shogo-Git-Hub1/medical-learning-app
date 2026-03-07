@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useEffect } from "react";
-import { useProgress } from "@/hooks/useProgress";
+import { useProgressContext } from "@/contexts/ProgressContext";
 import { getQuestionsById } from "@/services/lessonService";
 import { shuffle } from "@/lib/utils";
 import { setLastSubject } from "@/lib/progress";
@@ -15,7 +15,7 @@ type Props = {
 
 /** レッスン問題の先頭に今日復習すべき問題を混ぜ、問題順をランダムにする */
 export function LessonView({ lesson, questions }: Props) {
-  const { getDueReviewQuestionIds } = useProgress();
+  const { getDueReviewQuestionIds } = useProgressContext();
 
   useEffect(() => {
     if (lesson.subject) setLastSubject(lesson.subject);

@@ -12,8 +12,9 @@ export async function getLessonWithQuestionsAsync(lessonId: string): Promise<Les
   const info = getSubjectModuleInfo(lessonId);
   if (!info) return null;
 
+  // 拡張子を明示（Vitest/Vite の動的 import 静的解析用）。Next.js も解決可能。
   const mod = await import(
-    /* webpackChunkName: "subject-[request]" */ `./subjects/${info.key}`
+    /* webpackChunkName: "subject-[request]" */ `./subjects/${info.key}.ts`
   ) as Record<string, Lesson[] | Question[]>;
 
   const lessons = mod[info.lessonsExport] as Lesson[] | undefined;

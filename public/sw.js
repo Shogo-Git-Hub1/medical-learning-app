@@ -1,7 +1,11 @@
 /**
  * Service Worker: オフライン対応のためのキャッシュ
- * 静的エクスポート（out/）配信時、主要ルートと静的アセットをキャッシュし、
- * オフライン時は offline フォールバックを表示する。
+ *
+ * 重要: _next/static は NetworkFirst にすること。
+ * CacheFirst にするとデプロイ後に「古いビルドのチャンク」が返り、
+ * 新ビルドの webpack ランタイムと不整合して
+ * "Cannot read properties of undefined (reading 'call')" が発生する。
+ * オフライン時のみキャッシュにフォールバックする。
  */
 importScripts(
   "https://storage.googleapis.com/workbox-cdn/releases/7.0.0/workbox-sw.js"
@@ -10,12 +14,12 @@ importScripts(
 workbox.setConfig({ debug: false });
 
 const OFFLINE_FALLBACK = "/offline.html";
-const CACHE_NAME_RUNTIME = "medical-learning-runtime-v1";
+const CACHE_NAME_RUNTIME = "medical-learning-runtime-v2";
 
 // オフライン用フォールバックページをプリキャッシュ
 workbox.precaching.precacheAndRoute([{ url: OFFLINE_FALLBACK, revision: null }]);
 
-// ナビゲーション（HTML ドキュメント）: ネットワーク優先 → キャッシュ → オフライン表示
+// ナビゲーション（HTML）: ネットワーク優先 → キャッシュ → オフライン表示
 workbox.routing.registerRoute(
   ({ request }) => request.mode === "navigate",
   async ({ event }) => {
@@ -32,13 +36,16 @@ workbox.routing.registerRoute(
   }
 );
 
-// _next/static: キャッシュ優先（ハッシュ付きなので長期キャッシュ可）
+// _next/static: ネットワーク優先。デプロイ後の古いチャンク混在を防ぐためキャッシュはオフライン時のみ使用
 workbox.routing.registerRoute(
   ({ url }) => url.pathname.startsWith("/_next/static/"),
-  new workbox.strategies.CacheFirst({ cacheName: CACHE_NAME_RUNTIME })
+  new workbox.strategies.NetworkFirst({
+    cacheName: CACHE_NAME_RUNTIME,
+    networkTimeoutSeconds: 5,
+  })
 );
 
-// 同一オリジンのその他（manifest, icon など）: キャッシュありで再検証
+// 同一オリジンのその他（manifest, icon など）: 再検証付きキャッシュ
 workbox.routing.registerRoute(
   ({ url }) => url.origin === self.location.origin && url.pathname.startsWith("/"),
   new workbox.strategies.StaleWhileRevalidate({ cacheName: CACHE_NAME_RUNTIME })

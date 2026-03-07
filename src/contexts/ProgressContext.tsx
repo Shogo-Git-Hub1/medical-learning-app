@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import {
   createContext,
   useCallback,
@@ -14,15 +15,12 @@ import {
   saveProgress,
   getToday,
   getDefaultProgress,
-  getXPForCorrect,
+  applyAnswerToProgress,
   getSaveErrorMessage,
   xpToLevel,
   xpToNextLevel,
 } from "@/lib/progress";
 import { getDueReviewQuestionIdsThatExist } from "@/services/lessonService";
-
-const MIN_INTERVAL = 1;
-const MAX_INTERVAL = 21;
 
 export type ProgressContextValue = {
   progress: UserProgress;
@@ -39,14 +37,57 @@ export type ProgressContextValue = {
   clearSaveError: () => void;
 };
 
-const ProgressContext = createContext<ProgressContextValue | null>(null);
+/** Provider 外で useProgressContext が呼ばれたときの安全なデフォルト（本番でクラッシュさせない） */
+function getDefaultContextValue(): ProgressContextValue {
+  const progress = getDefaultProgress();
+  const level = 1;
+  const xpInLevel = 0;
+  const xpNeededForNext = 100;
+  const noop = () => {};
+  return {
+    progress,
+    level,
+    xpInLevel,
+    xpNeededForNext,
+    recordAnswer: noop,
+    completeLesson: noop,
+    getDueReviewQuestionIds: () => [],
+    ensureDailyReset: noop,
+    loadError: null,
+    saveError: null,
+    clearLoadError: noop,
+    clearSaveError: noop,
+  };
+}
 
+const defaultContextValue = getDefaultContextValue();
+
+/** Provider から渡された value かどうか判定するためのマーカー（開発時の警告用） */
+const PROVIDER_MARKER = Symbol.for("ProgressProvider");
+
+const ProgressContext = createContext<ProgressContextValue>(defaultContextValue);
+
+let hasWarnedOutsideProvider = false;
+
+/**
+ * 進捗コンテキストを取得する。
+ * ProgressProvider の外で呼ばれた場合はデフォルト値を返す（本番でクラッシュしない）。
+ * 通常は layout の AppProviders 内で提供される。
+ */
 export function useProgressContext(): ProgressContextValue {
   const ctx = useContext(ProgressContext);
-  if (!ctx) {
-    throw new Error("useProgress must be used within ProgressProvider");
+  if (process.env.NODE_ENV === "development") {
+    const fromProvider = (ctx as ProgressContextValue & { [PROVIDER_MARKER]?: true })[
+      PROVIDER_MARKER
+    ];
+    if (!fromProvider && !hasWarnedOutsideProvider) {
+      hasWarnedOutsideProvider = true;
+      console.warn(
+        "[useProgressContext] ProgressProvider の外で呼ばれています。layout の AppProviders の子孫で使ってください。"
+      );
+    }
   }
-  return ctx;
+  return ctx ?? defaultContextValue;
 }
 
 export function ProgressProvider({ children }: { children: ReactNode }) {
@@ -78,43 +119,7 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
       ensureDailyReset();
       const today = getToday();
       setProgress((p) => {
-        const prevReview = p.questionReviews[questionId];
-        const prevInterval = prevReview?.interval ?? 0;
-        let nextInterval: number;
-        let nextReview: string;
-        if (correct) {
-          nextInterval = prevInterval <= 0 ? MIN_INTERVAL : Math.min(prevInterval * 2, MAX_INTERVAL);
-          const d = new Date(today);
-          d.setDate(d.getDate() + nextInterval);
-          nextReview = d.toISOString().slice(0, 10);
-        } else {
-          nextInterval = MIN_INTERVAL;
-          const d = new Date(today);
-          d.setDate(d.getDate() + 1);
-          nextReview = d.toISOString().slice(0, 10);
-        }
-        const last = p.lastStudyDate ? new Date(p.lastStudyDate) : null;
-        const lastDay = last ? last.toISOString().slice(0, 10) : "";
-        let streak = p.streakDays;
-        if (today !== lastDay) {
-          const yesterday = new Date(today);
-          yesterday.setDate(yesterday.getDate() - 1);
-          const yesterdayStr = yesterday.toISOString().slice(0, 10);
-          streak = lastDay === yesterdayStr ? p.streakDays + 1 : 1;
-        }
-        const xpGain = correct ? getXPForCorrect(combo) : 0;
-        const next: UserProgress = {
-          ...p,
-          lastStudyDate: today,
-          streakDays: streak,
-          dailyAnswered: p.dailyResetDate === today ? p.dailyAnswered + 1 : 1,
-          dailyResetDate: p.dailyResetDate || today,
-          totalXP: p.totalXP + xpGain,
-          questionReviews: {
-            ...p.questionReviews,
-            [questionId]: { nextReview, interval: nextInterval },
-          },
-        };
+        const next = applyAnswerToProgress(p, questionId, correct, combo, today);
         const saved = saveProgress(next);
         if (!saved) setSaveError(getSaveErrorMessage());
         return next;
@@ -143,7 +148,7 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
   const level = xpToLevel(progress.totalXP);
   const { current: xpInLevel, needed: xpNeededForNext } = xpToNextLevel(progress.totalXP);
 
-  const value: ProgressContextValue = {
+  const value: ProgressContextValue & { [PROVIDER_MARKER]: true } = {
     progress,
     level,
     xpInLevel,
@@ -156,6 +161,7 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     saveError,
     clearLoadError,
     clearSaveError,
+    [PROVIDER_MARKER]: true,
   };
 
   return (

@@ -5,6 +5,7 @@ import {
   getToday,
   getComboMultiplier,
   getXPForCorrect,
+  applyAnswerToProgress,
   xpToLevel,
   xpToNextLevel,
   PROGRESS_SCHEMA_VERSION,
@@ -125,6 +126,53 @@ describe("progress", () => {
       const r = xpToNextLevel(100);
       expect(r.current).toBe(0);
       expect(r.needed).toBe(100);
+    });
+  });
+
+  describe("applyAnswerToProgress", () => {
+    const today = "2025-03-07";
+
+    it("正解時は復習間隔が延び、XP が加算される", () => {
+      const base: UserProgress = {
+        ...getDefaultProgress(),
+        lastStudyDate: "2025-03-06",
+        streakDays: 1,
+        dailyResetDate: today,
+        dailyAnswered: 2,
+        totalXP: 50,
+        questionReviews: {},
+      };
+      const next = applyAnswerToProgress(base, "q-1", true, 1, today);
+      expect(next.questionReviews["q-1"].interval).toBe(1);
+      expect(next.questionReviews["q-1"].nextReview).toBe("2025-03-08");
+      expect(next.totalXP).toBe(60);
+      expect(next.dailyAnswered).toBe(3);
+      expect(next.lastStudyDate).toBe(today);
+    });
+
+    it("不正解時は復習間隔が1日、XP は増えない", () => {
+      const base: UserProgress = {
+        ...getDefaultProgress(),
+        lastStudyDate: today,
+        dailyResetDate: today,
+        questionReviews: { "q-1": { nextReview: "2025-03-10", interval: 2 } },
+      };
+      const next = applyAnswerToProgress(base, "q-1", false, 1, today);
+      expect(next.questionReviews["q-1"].interval).toBe(1);
+      expect(next.questionReviews["q-1"].nextReview).toBe("2025-03-08");
+      expect(next.totalXP).toBe(base.totalXP);
+    });
+
+    it("昨日学習していればストリークが増える", () => {
+      const base: UserProgress = {
+        ...getDefaultProgress(),
+        lastStudyDate: "2025-03-06",
+        streakDays: 2,
+        dailyResetDate: today,
+        dailyAnswered: 0,
+      };
+      const next = applyAnswerToProgress(base, "q-1", true, 1, today);
+      expect(next.streakDays).toBe(3);
     });
   });
 });
