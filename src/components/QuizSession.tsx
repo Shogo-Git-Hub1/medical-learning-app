@@ -13,12 +13,12 @@ import { CharacterLine } from "@/components/CharacterLine";
 import { ConfettiEffect } from "@/components/ConfettiEffect";
 import { playCorrect, playWrong, playComplete } from "@/lib/sounds";
 
-/** 選択肢ごとのパステル背景（デザインガイドの6色ベース） */
-const OPTION_PASTEL_CLASSES = [
-  "!bg-pastel-blue/80 !border-pastel-blue/60",
-  "!bg-pastel-pink/70 !border-pastel-pink/50",
-  "!bg-[#9069CD]/25 !border-pastel-purple/40",
-  "!bg-[#FFC800]/20 !border-[#FFC800]/50",
+/** 選択肢ごとのアクセントカラー（Duolingo 6色パレット準拠） */
+const OPTION_ACCENTS = [
+  { bar: "#BBF2FF", shadow: "rgba(187,242,255,0.6)" }, // 水色
+  { bar: "#FFB2B2", shadow: "rgba(255,178,178,0.6)" }, // ピンク
+  { bar: "#9069CD", shadow: "rgba(144,105,205,0.5)" }, // パープル
+  { bar: "#FFC800", shadow: "rgba(255,200,0,0.6)" },   // イエロー
 ] as const;
 
 function ReportQuestionLink({
@@ -42,9 +42,9 @@ function ReportQuestionLink({
   return (
     <Link
       href={`/contact?${params.toString()}`}
-      className="text-xs text-pastel-ink/60 hover:text-pastel-ink underline"
+      className="text-[10px] font-mono text-pastel-ink/30 hover:text-pastel-ink/60 transition-colors"
     >
-      この問題を報告
+      // 問題を報告
     </Link>
   );
 }
@@ -62,7 +62,6 @@ export function QuizSession({ questions, lessonId, lessonTitle }: Props) {
   const [showFeedback, setShowFeedback] = useState(false);
   const [results, setResults] = useState<boolean[]>([]);
 
-  /** 各問題の選択肢の表示順をランダムにする（レッスン・問題セットが変わったときだけ再計算） */
   const questionIdsKey = questions.map((q) => q.id).join(",");
   const displayQuestions = useMemo(
     () =>
@@ -70,7 +69,7 @@ export function QuizSession({ questions, lessonId, lessonTitle }: Props) {
         ...q,
         options: shuffle([...q.options]),
       })),
-    [lessonId, questionIdsKey] // eslint-disable-line react-hooks/exhaustive-deps -- questions を直指定すると参照変動で毎回シャッフルされるため ID 文字列で比較
+    [lessonId, questionIdsKey] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   const current = displayQuestions[index];
@@ -78,7 +77,6 @@ export function QuizSession({ questions, lessonId, lessonTitle }: Props) {
   const correct = current?.options.find((o) => o.id === current.correctOptionId);
   const isCorrect = selectedId === current?.correctOptionId;
 
-  /** 末尾から連続した正解の数（Duolingo風コンボ） */
   const getComboFromResults = (r: boolean[]) => {
     let count = 0;
     for (let i = r.length - 1; i >= 0 && r[i]; i--) count++;
@@ -98,21 +96,13 @@ export function QuizSession({ questions, lessonId, lessonTitle }: Props) {
     else playWrong();
   };
 
-  /** 表示用：現在の連続正解コンボ数（直前の結果まで） */
   const displayCombo = getComboFromResults(results);
-
   const [showCompleted, setShowCompleted] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
-  /** 5の倍数コンボ達成時の雷オーバーレイ（画面全体・一瞬表示） */
   const [showLightningOverlay, setShowLightningOverlay] = useState(false);
 
   useEffect(() => {
-    if (
-      showFeedback &&
-      isCorrect &&
-      displayCombo >= 5 &&
-      displayCombo % 5 === 0
-    ) {
+    if (showFeedback && isCorrect && displayCombo >= 5 && displayCombo % 5 === 0) {
       setShowLightningOverlay(true);
       const t = setTimeout(() => setShowLightningOverlay(false), 1500);
       return () => clearTimeout(t);
@@ -136,47 +126,88 @@ export function QuizSession({ questions, lessonId, lessonTitle }: Props) {
 
   if (displayQuestions.length === 0) {
     return (
-      <div className="rounded-xl border-2 border-pastel-orange bg-pastel-rose/50 p-6 text-center text-pastel-ink">
-        <p className="font-medium">このレッスンには問題がありません。</p>
-        <PushButton href="/roadmap" variant="primary" className="mt-4">
+      <div className="neu-inset rounded-2xl p-8 text-center">
+        <p className="font-mono text-sm text-pastel-ink/50">// このレッスンには問題がありません</p>
+        <PushButton href="/roadmap" variant="primary" className="mt-6">
           ロードマップに戻る
         </PushButton>
       </div>
     );
   }
 
-  // 全問終了（「結果を見る」クリック後）
+  // ─── 完了画面 ───────────────────────────────────────────────────────
   if (showCompleted) {
     const correctCount = results.filter(Boolean).length + (isCorrect ? 1 : 0);
     const total = displayQuestions.length;
     const isGoodScore = total > 0 && correctCount >= total * 0.8;
+    const pct = total > 0 ? Math.round((correctCount / total) * 100) : 0;
 
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 animate-fade-in-up">
         <ConfettiEffect active={showConfetti} duration={3000} />
-        <div className="rounded-xl border-2 border-pastel-primary bg-pastel-mint p-6 text-center">
-          <h2 className="text-xl font-bold text-pastel-ink">レッスン完了</h2>
-          <p className="mt-2 text-pastel-ink/80">{lessonTitle}</p>
-          <p className="mt-4 text-2xl font-bold text-pastel-primary-dark">
-            {correctCount} / {total} 問正解
+
+        {/* 完了カード */}
+        <div className="neu-card-lg rounded-3xl p-8 text-center relative overflow-hidden">
+          {/* グロートップライン */}
+          <div
+            className="absolute top-0 left-8 right-8 h-0.5 rounded-b-full"
+            style={{
+              background: "linear-gradient(90deg, transparent, #58CC02, transparent)",
+              boxShadow: "0 0 14px rgba(88,204,2,0.55)",
+            }}
+            aria-hidden
+          />
+
+          <p className="text-[10px] font-mono text-pastel-primary/55 tracking-[0.2em] mb-5 uppercase">
+            // Lesson Complete
           </p>
+          <h2 className="text-lg font-bold text-pastel-ink font-nunito">{lessonTitle}</h2>
+
+          {/* スコア */}
+          <div className="mt-6 mb-2 flex flex-col items-center gap-1">
+            <span
+              className="text-6xl font-bold font-nunito text-pastel-primary"
+              style={{ textShadow: "0 0 20px rgba(88,204,2,0.55), 0 0 40px rgba(88,204,2,0.2)" }}
+            >
+              {pct}%
+            </span>
+            <span className="text-sm text-pastel-ink/50 font-mono mt-1">
+              {correctCount} / {total} 問正解
+            </span>
+          </div>
+
+          {/* スコアバー */}
+          <div className="mt-4 px-4">
+            <ProgressBar
+              current={correctCount}
+              total={total}
+              variant="quiz"
+              showLabel={false}
+            />
+          </div>
         </div>
+
         <CharacterLine
           characterId="shirin"
           lineKey={isGoodScore ? "lessonCompleteGood" : "lessonComplete"}
           size="sm"
         />
-        <div className="flex justify-center gap-4">
-          <PushButton href="/roadmap">ロードマップに戻る</PushButton>
-          <PushButton href="/" variant="outline">ホーム</PushButton>
+
+        <div className="flex gap-3">
+          <PushButton href="/roadmap" className="flex-1">
+            ロードマップへ
+          </PushButton>
+          <PushButton href="/" variant="outline" className="flex-1">
+            ホーム
+          </PushButton>
         </div>
       </div>
     );
   }
 
-  // 1問の表示（白背景）
+  // ─── クイズ本体 ──────────────────────────────────────────────────────
   return (
-    <div className="min-h-[60vh] rounded-2xl bg-white p-4 sm:p-6 -mx-4 sm:-mx-0 space-y-6">
+    <div className="space-y-5 animate-fade-in-up">
       {showLightningOverlay && (
         <LightningComboOverlay
           key={displayCombo}
@@ -185,32 +216,49 @@ export function QuizSession({ questions, lessonId, lessonTitle }: Props) {
           duration={1500}
         />
       )}
-      <div className="text-pastel-ink">
+
+      {/* ヘッダー：問題番号・コンボ・進捗 */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-mono text-pastel-ink/35 tracking-widest">
+            Q {index + 1} / {displayQuestions.length}
+          </span>
+          {displayCombo >= 1 && (
+            <div
+              className="flex items-center gap-1.5 rounded-full px-3 py-1"
+              style={{
+                background: "var(--neu-bg)",
+                boxShadow: "var(--neu-shadow-sm), 0 0 10px rgba(255,200,0,0.35)",
+              }}
+              aria-label={`${displayCombo} 連続正解`}
+            >
+              <span aria-hidden>🔥</span>
+              <span className="text-sm font-bold text-pastel-ink font-mono">{displayCombo}</span>
+              <span className="text-xs text-pastel-ink/50">コンボ</span>
+            </div>
+          )}
+        </div>
         <ProgressBar
           current={results.filter(Boolean).length}
           total={displayQuestions.length}
           label="正解"
           variant="quiz"
-          className="mb-1"
-          labelClassName="text-pastel-ink"
         />
-        <div className="flex items-center justify-end">
-          {displayCombo >= 1 && (
-            <div
-              className="flex items-center gap-1 rounded-full bg-amber-400/90 px-3 py-1 text-sm font-semibold text-pastel-ink"
-              aria-label={`${displayCombo} 連続正解`}
-            >
-              <span aria-hidden>🔥</span>
-              <span>{displayCombo} コンボ</span>
-            </div>
-          )}
-        </div>
       </div>
-      <div className="rounded-xl border-2 border-pastel-border bg-white/98 p-6 shadow-lg">
-        <h2 className="text-lg font-semibold text-pastel-ink leading-relaxed">
+
+      {/* 問題カード */}
+      <div className="neu-card-lg rounded-2xl p-6 relative overflow-hidden">
+        <div
+          className="absolute top-0 left-6 right-6 h-0.5 rounded-b-full"
+          style={{
+            background: "linear-gradient(90deg, transparent, rgba(88,204,2,0.55), transparent)",
+          }}
+          aria-hidden
+        />
+        <h2 className="text-lg font-semibold text-pastel-ink leading-relaxed font-nunito">
           {current.text}
         </h2>
-        <div className="mt-4 text-right">
+        <div className="mt-3 flex justify-end">
           <ReportQuestionLink
             lessonId={lessonId}
             lessonTitle={lessonTitle}
@@ -218,45 +266,89 @@ export function QuizSession({ questions, lessonId, lessonTitle }: Props) {
             questionText={current.text}
           />
         </div>
-        <ul className="mt-6 space-y-3">
-          {current.options.map((opt, optionIndex) => {
-            const chosen = selectedId === opt.id;
-            const isRight = opt.id === current.correctOptionId;
-            const optionVariant: "option" | "optionCorrect" | "optionWrong" =
-              showFeedback && isRight
-                ? "optionCorrect"
-                : showFeedback && chosen && !isRight
-                  ? "optionWrong"
-                  : "option";
-            const pastelClass = OPTION_PASTEL_CLASSES[optionIndex % OPTION_PASTEL_CLASSES.length];
-            const chosenOrFeedbackClass =
-              showFeedback && isRight
-                ? ""
-                : showFeedback && chosen && !isRight
-                  ? ""
-                : !showFeedback && chosen
-                  ? "!border-pastel-primary !bg-pastel-mint/80"
-                  : pastelClass;
-            const isWrongChosen = showFeedback && chosen && !isRight;
-            const isCorrectChosen = showFeedback && isRight;
-            return (
-              <li key={opt.id}>
-                <PushButton
-                  variant={optionVariant}
-                  onClick={() => handleSelect(opt.id)}
-                  disabled={showFeedback}
-                  className={`${chosenOrFeedbackClass} ${isWrongChosen ? "animate-feedback-shake" : ""} ${isCorrectChosen ? "animate-option-correct-pop" : ""}`}
-                >
-                  {opt.text}
-                </PushButton>
-              </li>
-            );
-          })}
-        </ul>
       </div>
 
+      {/* 選択肢 */}
+      <ul className="space-y-3">
+        {current.options.map((opt, optionIndex) => {
+          const chosen = selectedId === opt.id;
+          const isRight = opt.id === current.correctOptionId;
+          const accent = OPTION_ACCENTS[optionIndex % OPTION_ACCENTS.length];
+
+          // 状態ごとにシャドウ・ボーダー・背景を決定
+          let shadowStyle = "var(--neu-shadow-sm)";
+          let borderColor = "transparent";
+          let bgColor = "var(--neu-bg)";
+
+          if (showFeedback && isRight) {
+            shadowStyle = "var(--neu-shadow-sm), 0 0 16px rgba(88,204,2,0.45)";
+            borderColor = "rgba(88,204,2,0.55)";
+            bgColor = "rgba(232,245,224,0.75)";
+          } else if (showFeedback && chosen && !isRight) {
+            shadowStyle =
+              "inset 3px 3px 7px rgba(197,202,209,0.6), inset -3px -3px 7px rgba(255,255,255,0.75)";
+            borderColor = "rgba(232,100,100,0.55)";
+            bgColor = "rgba(255,210,210,0.5)";
+          } else if (!showFeedback && chosen) {
+            shadowStyle = "var(--neu-shadow-sm), 0 0 12px rgba(88,204,2,0.3)";
+            borderColor = "rgba(88,204,2,0.5)";
+          }
+
+          const isWrongChosen = showFeedback && chosen && !isRight;
+          const isCorrectReveal = showFeedback && isRight;
+
+          return (
+            <li key={opt.id}>
+              <button
+                onClick={() => handleSelect(opt.id)}
+                disabled={showFeedback}
+                className={[
+                  "w-full rounded-xl px-4 py-3.5 text-left font-medium text-pastel-ink",
+                  "flex items-center gap-3 transition-all duration-150",
+                  "disabled:cursor-default",
+                  !showFeedback && "hover:scale-[1.01] active:scale-[0.98]",
+                  isWrongChosen && "animate-feedback-shake",
+                  isCorrectReveal && "animate-option-correct-pop",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                style={{
+                  background: bgColor,
+                  boxShadow: shadowStyle,
+                  border: `1.5px solid ${borderColor}`,
+                }}
+              >
+                {/* 選択肢アクセントバー */}
+                <span
+                  className="w-1.5 h-7 rounded-full flex-shrink-0 transition-opacity duration-200"
+                  style={{
+                    background: accent.bar,
+                    boxShadow: `0 0 7px ${accent.shadow}`,
+                    opacity: showFeedback && !isRight ? 0.35 : 1,
+                  }}
+                  aria-hidden
+                />
+                <span className="flex-1 text-sm leading-snug">{opt.text}</span>
+                {showFeedback && isRight && (
+                  <span
+                    className="text-pastel-primary font-bold text-base"
+                    style={{ textShadow: "0 0 10px rgba(88,204,2,0.65)" }}
+                  >
+                    ✓
+                  </span>
+                )}
+                {showFeedback && chosen && !isRight && (
+                  <span className="text-pastel-error font-bold text-base">✗</span>
+                )}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+
+      {/* フィードバックパネル */}
       {showFeedback && (
-        <div className="space-y-4">
+        <div className="space-y-4 animate-fade-in-up">
           {isCorrect ? (
             <CharacterLine
               characterId="skurun"
@@ -283,34 +375,54 @@ export function QuizSession({ questions, lessonId, lessonTitle }: Props) {
               )}
             </>
           )}
+
+          {/* XP・解説パネル */}
           <div
-            className={`rounded-xl border-2 p-4 ${
-              isCorrect ? "border-pastel-success bg-pastel-mint" : "border-pastel-error bg-pastel-rose"
-            }`}
+            className="rounded-2xl p-4 relative overflow-hidden"
+            style={{
+              background: "var(--neu-bg)",
+              boxShadow: "var(--neu-inset)",
+            }}
           >
+            {/* カラーアクセントライン */}
+            <div
+              className="absolute top-0 left-4 right-4 h-0.5 rounded-b-full"
+              style={{
+                background: isCorrect
+                  ? "linear-gradient(90deg, transparent, rgba(88,204,2,0.7), transparent)"
+                  : "linear-gradient(90deg, transparent, rgba(232,100,100,0.7), transparent)",
+              }}
+              aria-hidden
+            />
+
             {isCorrect && (
-              <p className="text-sm text-pastel-primary-dark">
+              <p
+                className="text-sm font-bold font-mono text-pastel-primary"
+                style={{ textShadow: "0 0 8px rgba(88,204,2,0.4)" }}
+              >
                 +{getXPForCorrect(displayCombo)} XP
                 {displayCombo >= 2 && (
-                  <span className="ml-1 text-pastel-primary-dark/80">
-                    （{displayCombo} コンボ！ コンボボーナス）
+                  <span className="ml-2 font-normal text-pastel-primary/65">
+                    ({displayCombo} コンボボーナス)
                   </span>
                 )}
               </p>
             )}
             {!isCorrect && displayCombo >= 1 && (
-              <p className="text-sm text-pastel-ink/80">コンボが途切れました。</p>
+              <p className="text-sm font-mono text-pastel-ink/55">// コンボが途切れました</p>
             )}
             {current.explanation && (
-              <p className="mt-2 text-sm text-pastel-ink/80">{current.explanation}</p>
+              <p className="mt-2 text-sm text-pastel-ink/70 leading-relaxed">
+                {current.explanation}
+              </p>
             )}
           </div>
+
           <PushButton type="button" onClick={handleNext} className="w-full">
-            {isLast ? "結果を見る" : "次へ"}
+            {isLast ? "結果を見る" : "次へ →"}
           </PushButton>
         </div>
       )}
     </div>
   );
 }
-

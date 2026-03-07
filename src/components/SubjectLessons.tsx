@@ -67,7 +67,7 @@ export function SubjectLessons({ subject }: Props) {
                 </div>
               ) : (
                 <Link
-                  href={`/lesson/${lesson.id}`}
+                  href={`/lesson/${lesson.id}?from=${encodeURIComponent(`/subjects/${encodeURIComponent(subject)}`)}`}
                   className="neu-card-sm rounded-xl p-4 flex items-center justify-between transition-all duration-200 active:scale-[0.98] relative overflow-hidden group block"
                 >
                   {/* ホバー時のグローライン */}

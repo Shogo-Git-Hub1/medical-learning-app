@@ -7,26 +7,38 @@ import { CharacterAvatar, type CharacterAnimation } from "@/components/Character
 type Props = {
   characterId: CharacterId;
   lineKey: CharacterLineKey;
-  /** 台詞内の {correct}, {explanation} を置換する値 */
   replacements?: { correct?: string; explanation?: string };
-  /** 吹き出しの見た目（デフォルト: 通常） */
   variant?: "default" | "correct" | "wrong";
   size?: "sm" | "md" | "lg";
-  /** キャラのアニメーション（未指定時は variant と characterId から自動） */
   animation?: CharacterAnimation;
   className?: string;
 };
 
-const variantClasses = {
-  default: "border-pastel-border bg-white",
-  correct: "border-pastel-success bg-pastel-mint",
-  wrong: "border-pastel-error bg-pastel-rose",
-};
+/** variant ごとのデザイントークン */
+const VARIANT_STYLES = {
+  default: {
+    shadow: "var(--neu-shadow-sm)",
+    bg: "var(--neu-bg)",
+    accent: "linear-gradient(90deg, transparent, rgba(175,175,175,0.4), transparent)",
+    accentGlow: "none",
+    nameColor: "text-pastel-ink/40",
+  },
+  correct: {
+    shadow: "var(--neu-shadow-sm), 0 0 14px rgba(88,204,2,0.22)",
+    bg: "rgba(232,245,224,0.65)",
+    accent: "linear-gradient(90deg, transparent, rgba(88,204,2,0.65), transparent)",
+    accentGlow: "0 0 8px rgba(88,204,2,0.4)",
+    nameColor: "text-pastel-primary/70",
+  },
+  wrong: {
+    shadow: "var(--neu-shadow-sm)",
+    bg: "rgba(255,218,218,0.55)",
+    accent: "linear-gradient(90deg, transparent, rgba(232,100,100,0.65), transparent)",
+    accentGlow: "none",
+    nameColor: "text-pastel-error/70",
+  },
+} as const;
 
-/**
- * キャラクターの吹き出し＋台詞。誰が話しているかと文言を表示する。
- */
-/** variant / characterId / lineKey からアニメーションを決める */
 function getDefaultAnimation(
   variant: "default" | "correct" | "wrong",
   characterId: CharacterId,
@@ -34,8 +46,16 @@ function getDefaultAnimation(
 ): CharacterAnimation {
   if (variant === "correct" && characterId === "skurun") return "happy";
   if (variant === "wrong" && characterId === "skurun") return "sad";
-  if (characterId === "shirin" && ["lessonComplete", "lessonCompleteGood", "roadmapHint"].includes(lineKey)) return "bounce";
-  if (variant === "default" && (characterId === "skurun" || characterId === "shirin")) return "idle";
+  if (
+    characterId === "shirin" &&
+    ["lessonComplete", "lessonCompleteGood", "roadmapHint"].includes(lineKey)
+  )
+    return "bounce";
+  if (
+    variant === "default" &&
+    (characterId === "skurun" || characterId === "shirin")
+  )
+    return "idle";
   return null;
 }
 
@@ -50,20 +70,54 @@ export function CharacterLine({
 }: Props) {
   const profile = CHARACTER_PROFILES[characterId];
   const line = getCharacterLine(lineKey, characterId, replacements);
-  const avatarAnimation = animation ?? getDefaultAnimation(variant, characterId, lineKey);
+  const avatarAnimation =
+    animation ?? getDefaultAnimation(variant, characterId, lineKey);
 
   if (!line) return null;
 
+  const styles = VARIANT_STYLES[variant];
+
   return (
     <div
-      className={`flex items-start gap-3 rounded-xl border-2 p-3 ${variantClasses[variant]} ${className}`}
+      className={`flex items-start gap-3 rounded-xl p-3 relative overflow-hidden ${className}`}
+      style={{
+        background: styles.bg,
+        boxShadow: styles.shadow,
+      }}
       role="group"
       aria-label={`${profile.name}: ${line}`}
     >
-      <CharacterAvatar characterId={characterId} size={size} animation={avatarAnimation} />
-      <div className="flex-1 min-w-0">
-        <p className="text-xs font-medium text-pastel-ink/70">{profile.name}</p>
-        <p className="mt-0.5 text-pastel-ink leading-relaxed">{line}</p>
+      {/* バリアントアクセントライン */}
+      <div
+        className="absolute top-0 left-4 right-4 h-0.5 rounded-b-full"
+        style={{
+          background: styles.accent,
+          boxShadow: styles.accentGlow,
+        }}
+        aria-hidden
+      />
+
+      {/* キャラクターアバター（ニューモーフィズム丸枠で浮き出す） */}
+      <div
+        className="flex-shrink-0 rounded-full p-0.5"
+        style={{
+          background: "var(--neu-bg)",
+          boxShadow: "var(--neu-shadow-sm)",
+        }}
+      >
+        <CharacterAvatar
+          characterId={characterId}
+          size={size}
+          animation={avatarAnimation}
+        />
+      </div>
+
+      {/* テキスト */}
+      <div className="flex-1 min-w-0 pt-0.5">
+        <p className={`text-[10px] font-mono font-bold uppercase tracking-wider ${styles.nameColor}`}>
+          {profile.name}
+        </p>
+        <p className="mt-1 text-sm text-pastel-ink leading-relaxed">{line}</p>
       </div>
     </div>
   );

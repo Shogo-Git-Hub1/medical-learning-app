@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { Nunito, Roboto } from "next/font/google";
+import { BottomNav } from "@/components/BottomNav";
 import "./globals.css";
 
 const nunito = Nunito({
@@ -72,7 +73,8 @@ export default function RootLayout({
                 // MED.SYS
               </span>
             </div>
-            <nav className="flex gap-0.5">
+            {/* デスクトップのみ表示するナビ */}
+            <nav className="hidden md:flex gap-0.5">
               {NAV_LINKS.map(({ href, label }) => (
                 <Link
                   key={href}
@@ -87,13 +89,21 @@ export default function RootLayout({
           {/* 底辺グローライン */}
           <div
             className="absolute bottom-0 left-0 right-0 h-px pointer-events-none"
-            style={{ background: "linear-gradient(90deg, transparent, rgba(88,204,2,0.65) 30%, rgba(88,204,2,0.65) 70%, transparent)" }}
+            style={{
+              background:
+                "linear-gradient(90deg, transparent, rgba(88,204,2,0.65) 30%, rgba(88,204,2,0.65) 70%, transparent)",
+            }}
             aria-hidden
           />
         </header>
-        <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-6">
+
+        {/* モバイルボトムナビの高さ分だけ下にパディング */}
+        <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-6 pb-24 md:pb-6">
           {children}
         </main>
+
+        {/* モバイル専用ボトムナビ */}
+        <BottomNav />
       </body>
     </html>
   );

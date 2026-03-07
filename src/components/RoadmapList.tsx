@@ -111,7 +111,7 @@ export function RoadmapList() {
                                 </div>
                               ) : (
                                 <Link
-                                  href={`/lesson/${lesson.id}`}
+                                  href={`/lesson/${lesson.id}?from=/roadmap`}
                                   className="neu-card-sm rounded-xl p-3 flex items-center justify-between transition-all duration-200 active:scale-[0.98] relative overflow-hidden group block"
                                 >
                                   <div
