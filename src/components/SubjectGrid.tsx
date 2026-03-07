@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useProgress } from "@/hooks/useProgress";
 import { getLessonsGroupedBySubject, SUBJECT_DISPLAY_ORDER } from "@/services/lessonService";
-import { SUBJECT_THEMES, DEFAULT_THEME } from "@/components/RoadmapPrimitives";
+import { SUBJECT_THEMES, DEFAULT_THEME } from "@/data/subjectThemes";
 
 export function SubjectGrid() {
   const { progress } = useProgress();

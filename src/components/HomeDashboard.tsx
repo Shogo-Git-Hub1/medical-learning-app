@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useProgress } from "@/hooks/useProgress";
 import { getLessonsGroupedBySubject, SUBJECT_DISPLAY_ORDER } from "@/services/lessonService";
-import { SUBJECT_THEMES, DEFAULT_THEME } from "@/components/RoadmapPrimitives";
+import { SUBJECT_THEMES, DEFAULT_THEME } from "@/data/subjectThemes";
 import { NavigatorsImage } from "@/components/CharacterAvatar";
 import { CharacterLine } from "@/components/CharacterLine";
 import { getLastSubject, getLastLessonResult } from "@/lib/progress";
@@ -396,16 +396,21 @@ export function HomeDashboard() {
             color="#FB8C00" delay="60ms"
           />
           <StatCard
-            icon="🎯" title="デイリーミッション"
-            value={`${progress.dailyAnswered} / ${progress.dailyGoal} 問`} sub="今日の目標"
-            color="#43A047" delay="120ms"
+            icon={progress.dailyAnswered >= progress.dailyGoal ? "✅" : "🎯"}
+            title="デイリーミッション"
+            value={`${progress.dailyAnswered} / ${progress.dailyGoal} 問`}
+            sub={progress.dailyAnswered >= progress.dailyGoal ? "今日の目標達成！" : "今日の目標"}
+            color={progress.dailyAnswered >= progress.dailyGoal ? "#FFC800" : "#43A047"}
+            delay="120ms"
           />
-          <StatCard
-            icon="⚡" title="レベル・XP"
-            value={`Lv.${level}  (${progress.totalXP} XP)`}
-            sub={`あと ${xpNeededForNext} XP でレベルアップ`}
-            color="#1E88E5" delay="180ms"
-          />
+          <Link href="/profile" className="block">
+            <StatCard
+              icon="⚡" title="レベル・XP"
+              value={`Lv.${level}`}
+              sub={`${progress.totalXP} XP / あと ${xpNeededForNext}`}
+              color="#1E88E5" delay="180ms"
+            />
+          </Link>
         </div>
       </section>
 

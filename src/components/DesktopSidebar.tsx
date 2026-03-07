@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useProgress } from "@/hooks/useProgress";
 
 type NavItem = {
   href: string;
@@ -55,9 +57,15 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 export function DesktopSidebar() {
-  const pathname = usePathname();
+  const rawPathname = usePathname();
+  const [pathname, setPathname] = useState("");
+  useEffect(() => { setPathname(rawPathname); }, [rawPathname]);
+
+  const { progress, level, xpInLevel, xpNeededForNext } = useProgress();
+  const xpPct = Math.round((xpInLevel / (xpInLevel + xpNeededForNext)) * 100);
 
   const isActive = (href: string) => {
+    if (!pathname) return false;
     if (href === "/") return pathname === "/";
     return pathname.startsWith(href);
   };
@@ -110,6 +118,44 @@ export function DesktopSidebar() {
           );
         })}
       </nav>
+
+      {/* XP / Level footer */}
+      <div className="px-4 pb-6 pt-3 border-t border-black/[0.06]">
+        <Link
+          href="/profile"
+          className="block rounded-2xl p-3 transition-all duration-150 active:scale-[0.97]"
+          style={{ background: "rgba(88,204,2,0.07)", border: "1.5px solid rgba(88,204,2,0.15)" }}
+          aria-label="プロフィールを見る"
+        >
+          {/* Level + streak */}
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[13px] font-bold font-nunito" style={{ color: "#46a302" }}>
+              Lv. {level}
+            </span>
+            <span className="text-[11px] font-mono text-[#9ca3af] flex items-center gap-1">
+              🔥 {progress.streakDays}日
+            </span>
+          </div>
+
+          {/* XP bar */}
+          <div className="h-2 rounded-full bg-black/[0.07] overflow-hidden mb-1.5">
+            <div
+              className="h-full rounded-full transition-all duration-700 ease-out"
+              style={{ width: `${xpPct}%`, background: "linear-gradient(90deg, #58cc02, #46a302)" }}
+            />
+          </div>
+
+          {/* XP numbers */}
+          <div className="flex justify-between">
+            <span className="text-[10px] font-mono" style={{ color: "#58cc02" }}>
+              {xpInLevel} XP
+            </span>
+            <span className="text-[10px] font-mono text-[#9ca3af]">
+              あと {xpNeededForNext} XP
+            </span>
+          </div>
+        </Link>
+      </div>
     </aside>
   );
 }

@@ -138,7 +138,7 @@ export function ContactForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">種別</label>
+        <label className="block text-sm font-medium text-pastel-ink/70 mb-1">種別</label>
         <div className="flex gap-4">
           <label className="flex items-center gap-2">
             <input
@@ -163,11 +163,11 @@ export function ContactForm() {
 
       {formType === REPORT_TYPE && (
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">報告の種類</label>
+          <label className="block text-sm font-medium text-pastel-ink/70 mb-1">報告の種類</label>
           <select
             value={reportReason}
             onChange={(e) => setReportReason(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800"
+            className="w-full rounded-lg border border-pastel-border px-3 py-2 text-pastel-ink bg-pastel-card"
           >
             <option value={REPORT_REASON_WRONG}>問題が誤っている（正答・解説など）</option>
             <option value={REPORT_REASON_TYPO}>誤字脱字がある</option>
@@ -179,48 +179,48 @@ export function ContactForm() {
               placeholder="レッスン名（任意）"
               value={reportLessonTitle}
               onChange={(e) => setReportLessonTitle(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800 placeholder:text-slate-400"
+              className="w-full rounded-lg border border-pastel-border px-3 py-2 text-pastel-ink placeholder:text-pastel-ink/30 bg-pastel-card"
             />
             <input
               type="text"
               placeholder="問題ID（任意）"
               value={reportQuestionId}
               onChange={(e) => setReportQuestionId(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800 placeholder:text-slate-400"
+              className="w-full rounded-lg border border-pastel-border px-3 py-2 text-pastel-ink placeholder:text-pastel-ink/30 bg-pastel-card"
             />
             <textarea
               placeholder="問題文（任意・該当する問題の文章をコピーしてください）"
               value={reportQuestionText}
               onChange={(e) => setReportQuestionText(e.target.value)}
               rows={2}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800 placeholder:text-slate-400"
+              className="w-full rounded-lg border border-pastel-border px-3 py-2 text-pastel-ink placeholder:text-pastel-ink/30 bg-pastel-card"
             />
           </div>
         </div>
       )}
 
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">お名前</label>
+        <label className="block text-sm font-medium text-pastel-ink/70 mb-1">お名前</label>
         <input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800"
+          className="w-full rounded-lg border border-pastel-border px-3 py-2 text-pastel-ink bg-pastel-card"
           required
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">メールアドレス</label>
+        <label className="block text-sm font-medium text-pastel-ink/70 mb-1">メールアドレス</label>
         <input
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800"
+          className="w-full rounded-lg border border-pastel-border px-3 py-2 text-pastel-ink bg-pastel-card"
           required
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">
+        <label className="block text-sm font-medium text-pastel-ink/70 mb-1">
           {formType === REPORT_TYPE ? "詳細（どの部分が誤っているか等）" : "お問い合わせ内容"}
         </label>
         <textarea

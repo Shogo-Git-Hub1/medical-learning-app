@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useProgress } from "@/hooks/useProgress";
 import { getLessonsGroupedBySubject, SUBJECT_DISPLAY_ORDER } from "@/services/lessonService";
-import { SUBJECT_THEMES, DEFAULT_THEME } from "@/components/RoadmapPrimitives";
+import { SUBJECT_THEMES, DEFAULT_THEME } from "@/data/subjectThemes";
 
 export function ProfileContent() {
   const { progress, level, xpInLevel, xpNeededForNext } = useProgress();
@@ -143,7 +143,7 @@ export function ProfileContent() {
                   </div>
                 </div>
 
-                {allDone && (
+                {allDone ? (
                   <span
                     className="text-sm flex-shrink-0"
                     style={{ color: theme.main }}
@@ -151,6 +151,8 @@ export function ProfileContent() {
                   >
                     ✓
                   </span>
+                ) : (
+                  <span className="text-pastel-ink/30 text-base flex-shrink-0" aria-hidden>›</span>
                 )}
               </Link>
             );

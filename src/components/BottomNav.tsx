@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState, useEffect } from "react";
 
 // Per-tab accent color — intentionally distinct to add visual interest
 const NAV_ITEMS = [
@@ -58,9 +59,12 @@ const NAV_ITEMS = [
 ] as const;
 
 export function BottomNav() {
-  const pathname = usePathname();
+  const rawPathname = usePathname();
+  const [pathname, setPathname] = useState("");
+  useEffect(() => { setPathname(rawPathname); }, [rawPathname]);
 
   const isActive = (href: string) => {
+    if (!pathname) return false;
     if (href === "/") return pathname === "/";
     return pathname.startsWith(href);
   };
