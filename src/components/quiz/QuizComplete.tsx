@@ -197,6 +197,7 @@ export function QuizComplete({
 
         {/* ─── CTAボタン ────────────────────────────────────────── */}
         <div className="space-y-3">
+          {/* Primary CTA：高得点なら「次のレッスンへ」、そうでなければ「もう一度挑戦」 */}
           {isGoodScore && nextLesson ? (
             <PushButton
               href={`/lesson/${nextLesson.id}?from=/subjects`}
@@ -204,7 +205,7 @@ export function QuizComplete({
             >
               次のレッスンへ
             </PushButton>
-          ) : !isGoodScore && lessonId !== "review" ? (
+          ) : lessonId !== "review" ? (
             <PushButton
               onClick={onRetry}
               className="w-full"
@@ -212,6 +213,22 @@ export function QuizComplete({
               もう一度挑戦
             </PushButton>
           ) : null}
+
+          {/* Secondary CTA：高得点時→「もう一度挑戦」、低得点時→「次のレッスンへ」を追加 */}
+          {isGoodScore && lessonId !== "review" && (
+            <PushButton onClick={onRetry} variant="outline" className="w-full">
+              もう一度挑戦
+            </PushButton>
+          )}
+          {!isGoodScore && nextLesson && lessonId !== "review" && (
+            <PushButton
+              href={`/lesson/${nextLesson.id}?from=/subjects`}
+              variant="outline"
+              className="w-full"
+            >
+              次のレッスンへ
+            </PushButton>
+          )}
 
           <div className="flex gap-3">
             <PushButton href="/subjects" variant="outline" className="flex-1">

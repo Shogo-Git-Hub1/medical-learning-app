@@ -340,8 +340,9 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1,
   const questionPositionId = "quiz-question-position";
   const questionLabelId = "quiz-question-label";
   const correctAnswerCount = results.filter(Boolean).length;
+  // 回答済み問題数ベース：答えれば常にバーが前進する（正誤に関わらず進捗感を維持）
   const progressPct = displayQuestions.length > 0
-    ? Math.round((correctAnswerCount / displayQuestions.length) * 100)
+    ? Math.round((results.length / displayQuestions.length) * 100)
     : 0;
 
   // ─── クイズ本体 ──────────────────────────────────────────────────────
@@ -374,10 +375,10 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1,
         <div
           className="flex-1 relative h-[14px] rounded-full overflow-hidden"
           role="progressbar"
-          aria-valuenow={correctAnswerCount}
+          aria-valuenow={results.length}
           aria-valuemin={0}
           aria-valuemax={displayQuestions.length}
-          aria-label={`正解 ${correctAnswerCount} / ${displayQuestions.length}`}
+          aria-label={`${results.length} / ${displayQuestions.length} 問回答済み`}
           style={{
             background: "rgba(0,0,0,0.08)",
             boxShadow: "inset 0 2px 4px rgba(0,0,0,0.1)",
