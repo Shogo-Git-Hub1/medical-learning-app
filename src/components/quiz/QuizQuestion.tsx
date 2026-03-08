@@ -1,12 +1,10 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import type { Question } from "@/types";
 import { PushButton } from "@/components/ui/PushButton";
-import { CardWithAccent } from "@/components/ui/CardWithAccent";
 import { CharacterLine } from "@/components/CharacterLine";
-import { getXPForCorrect } from "@/lib/progress";
 import { getOptionStyle, OPTION_ACCENTS } from "@/components/quiz/quizOptionStyles";
 
 function ReportQuestionLink({
@@ -30,10 +28,24 @@ function ReportQuestionLink({
   return (
     <Link
       href={`/contact?${params.toString()}`}
-      className="text-[10px] font-mono text-pastel-ink/30 hover:text-pastel-ink/60 transition-colors"
+      className="absolute bottom-3 right-3 p-1.5 rounded-lg transition-colors hover:bg-black/5 active:bg-black/10"
+      style={{ color: "rgba(0,0,0,0.22)" }}
       aria-label="この問題を報告する"
     >
-      この問題を報告
+      <svg
+        viewBox="0 0 24 24"
+        width="14"
+        height="14"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden
+      >
+        <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+        <line x1="4" y1="22" x2="4" y2="15" />
+      </svg>
     </Link>
   );
 }
@@ -44,7 +56,6 @@ export type QuizQuestionProps = {
   showFeedback: boolean;
   isCorrect: boolean;
   isLast: boolean;
-  displayCombo: number;
   lessonId: string;
   lessonTitle: string;
   questionLabelId: string;
@@ -55,8 +66,9 @@ export type QuizQuestionProps = {
 };
 
 /**
- * 1問分の表示：問題カード・選択肢・正誤フィードバックパネル。
- * 問題数が増えても1問あたりのレンダリングは独立して最適化しやすい。
+ * 1問分の表示：問題カード・選択肢・正誤フィードバック。
+ * - 回答後の「次へ」ボタンは画面下部に固定表示
+ * - 解説は「スマート解説」ボタンで折りたたみ展開
  */
 export function QuizQuestion({
   current,
@@ -64,7 +76,6 @@ export function QuizQuestion({
   showFeedback,
   isCorrect,
   isLast,
-  displayCombo,
   lessonId,
   lessonTitle,
   questionLabelId,
@@ -73,35 +84,61 @@ export function QuizQuestion({
   onNext,
   nextButtonRef,
 }: QuizQuestionProps) {
+  const [explanationOpen, setExplanationOpen] = useState(false);
+  // 正解アニメーションが完了してからキャラクターコメントを表示する（50ms遅延）
+  const [showComment, setShowComment] = useState(false);
+
+  // 新しい問題に進んだら解説・コメントを閉じる
+  useEffect(() => {
+    setExplanationOpen(false);
+  }, [current.id]);
+
+  useEffect(() => {
+    if (!showFeedback) {
+      setShowComment(false);
+      return;
+    }
+    const t = setTimeout(() => setShowComment(true), 50);
+    return () => clearTimeout(t);
+  }, [showFeedback]);
+
   return (
     <>
-      <CardWithAccent variant="success" container="card-lg" className="rounded-2xl p-6">
+      {/* ─── 問題テキスト ────────────────────────────────────────────── */}
+      <div className="relative px-2 pt-4 pb-8">
         <h2
           id={questionLabelId}
-          className="text-lg font-semibold text-pastel-ink leading-relaxed font-nunito"
+          className="text-lg font-semibold text-pastel-ink leading-relaxed font-nunito text-center"
           tabIndex={-1}
         >
           {current.text}
         </h2>
-        <div className="mt-3 flex justify-end">
-          <ReportQuestionLink
-            lessonId={lessonId}
-            lessonTitle={lessonTitle}
-            questionId={current.id}
-            questionText={current.text}
-          />
-        </div>
-      </CardWithAccent>
+        <ReportQuestionLink
+          lessonId={lessonId}
+          lessonTitle={lessonTitle}
+          questionId={current.id}
+          questionText={current.text}
+        />
+      </div>
 
+      {/* ─── 選択肢リスト ────────────────────────────────────────────── */}
       <ul className="space-y-3" role="group" aria-label="選択肢" aria-describedby={questionLabelId}>
         {current.options.map((opt, optionIndex) => {
           const chosen = selectedId === opt.id;
           const isRight = opt.id === current.correctOptionId;
           const accent = OPTION_ACCENTS[optionIndex % OPTION_ACCENTS.length];
           const optionNumber = optionIndex + 1;
-          const { shadowStyle, borderColor, bgColor } = getOptionStyle(showFeedback, chosen, isRight);
+          const { shadowStyle, borderColor, bgColor, barColor, barGlow } = getOptionStyle(
+            showFeedback,
+            chosen,
+            isRight
+          );
           const isWrongChosen = showFeedback && chosen && !isRight;
           const isCorrectReveal = showFeedback && isRight;
+          const isDimmed = showFeedback && !isRight && !chosen;
+
+          const resolvedBarColor = barColor ?? accent.bar;
+          const resolvedBarGlow = barGlow ?? `0 0 8px ${accent.shadow}`;
 
           return (
             <li key={opt.id}>
@@ -111,41 +148,71 @@ export function QuizQuestion({
                 onClick={() => onSelect(opt.id)}
                 disabled={showFeedback}
                 className={[
-                  "w-full rounded-xl px-4 py-3.5 text-left font-medium text-pastel-ink",
-                  "flex items-center gap-3 transition-all duration-150",
+                  "quiz-option-3d",
+                  "w-full rounded-xl overflow-hidden",
+                  "flex items-stretch",
+                  "font-medium text-pastel-ink",
                   "disabled:cursor-default",
-                  !showFeedback && "hover:scale-[1.01] active:scale-[0.98]",
                   isWrongChosen && "animate-feedback-shake",
                   isCorrectReveal && "animate-option-correct-pop",
+                  isDimmed && "opacity-55",
                 ]
                   .filter(Boolean)
                   .join(" ")}
                 style={{
                   background: bgColor,
                   boxShadow: shadowStyle,
-                  border: `1.5px solid ${borderColor}`,
+                  border: `2px solid ${borderColor}`,
+                  transition: "transform 150ms ease, box-shadow 150ms ease, opacity 200ms ease",
                 }}
               >
-                <span
-                  className="w-1.5 h-7 rounded-full flex-shrink-0 transition-opacity duration-200"
-                  style={{
-                    background: accent.bar,
-                    boxShadow: `0 0 7px ${accent.shadow}`,
-                    opacity: showFeedback && !isRight ? 0.35 : 1,
-                  }}
-                  aria-hidden
-                />
-                <span className="flex-1 text-sm leading-snug">{opt.text}</span>
-                {showFeedback && isRight && (
+                {/* 左アクセントバー */}
+                {!isDimmed && (
                   <span
-                    className="text-pastel-primary font-bold text-base"
-                    style={{ textShadow: "0 0 10px rgba(88,204,2,0.65)" }}
-                  >
-                    ✓
-                  </span>
+                    className={[
+                      "w-[5px] flex-shrink-0 rounded-l-[9px] transition-colors duration-300",
+                      chosen && "quiz-bar-pop",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                    style={{
+                      background: `linear-gradient(
+                        180deg,
+                        rgba(255,255,255,0.38) 0%,
+                        rgba(255,255,255,0.08) 45%,
+                        rgba(0,0,0,0.12) 100%
+                      ), ${resolvedBarColor}`,
+                      boxShadow: resolvedBarGlow,
+                    }}
+                    aria-hidden
+                  />
                 )}
-                {showFeedback && chosen && !isRight && (
-                  <span className="text-pastel-error font-bold text-base">✗</span>
+
+                {/* テキスト中央配置 */}
+                <span className="flex-1 flex items-center justify-center py-4 px-4 text-sm leading-snug text-center min-h-[52px]">
+                  {opt.text}
+                </span>
+
+                {/* 右アクセントバー */}
+                {!isDimmed && (
+                  <span
+                    className={[
+                      "w-[5px] flex-shrink-0 rounded-r-[9px] transition-colors duration-300",
+                      chosen && "quiz-bar-pop",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                    style={{
+                      background: `linear-gradient(
+                        180deg,
+                        rgba(255,255,255,0.38) 0%,
+                        rgba(255,255,255,0.08) 45%,
+                        rgba(0,0,0,0.12) 100%
+                      ), ${resolvedBarColor}`,
+                      boxShadow: resolvedBarGlow,
+                    }}
+                    aria-hidden
+                  />
                 )}
               </button>
             </li>
@@ -153,8 +220,11 @@ export function QuizQuestion({
         })}
       </ul>
 
-      {showFeedback && (
-        <div className="space-y-4 animate-fade-in-up">
+      {/* ─── フィードバックセクション ────────────────────────────────── */}
+      {showComment && (
+        // pb-24 で固定「次へ」バーに隠れないようにする
+        <div className="space-y-3 animate-fade-in-up pb-24">
+          {/* キャラクターコメント */}
           {isCorrect ? (
             <CharacterLine
               characterId="skurun"
@@ -182,54 +252,90 @@ export function QuizQuestion({
             </>
           )}
 
-          <div
-            className="rounded-2xl p-4 relative overflow-hidden"
-            style={{
-              background: "var(--neu-bg)",
-              boxShadow: "var(--neu-inset)",
-            }}
-          >
+          {/* スマート解説（ボタン＋本文を1つのカードとして結合） */}
+          {current.explanation && (
             <div
-              className="absolute top-0 left-4 right-4 h-0.5 rounded-b-full"
+              className="overflow-hidden transition-all duration-200"
               style={{
-                background: isCorrect
-                  ? "linear-gradient(90deg, transparent, rgba(88,204,2,0.7), transparent)"
-                  : "linear-gradient(90deg, transparent, rgba(232,100,100,0.7), transparent)",
+                background: "var(--neu-bg)",
+                boxShadow: "var(--neu-shadow-sm)",
+                borderRadius: "12px",
               }}
-              aria-hidden
-            />
-            {isCorrect && (
-              <p
-                className="text-sm font-bold font-mono text-pastel-primary"
-                style={{ textShadow: "0 0 8px rgba(88,204,2,0.4)" }}
+            >
+              {/* ヘッダーボタン */}
+              <button
+                type="button"
+                onClick={() => setExplanationOpen((v) => !v)}
+                className="w-full flex items-center justify-between px-4 py-2.5 transition-colors duration-150"
+                aria-expanded={explanationOpen}
+                aria-controls="quiz-explanation"
               >
-                +{getXPForCorrect(displayCombo)} XP
-                {displayCombo >= 2 && (
-                  <span className="ml-2 font-normal text-pastel-primary/65">
-                    ({displayCombo} コンボボーナス)
-                  </span>
-                )}
-              </p>
-            )}
-            {!isCorrect && displayCombo >= 1 && (
-              <p className="text-sm font-mono text-pastel-ink/55">{"// コンボが途切れました"}</p>
-            )}
-            {current.explanation && (
-              <p className="mt-2 text-sm text-pastel-ink/70 leading-relaxed">
-                {current.explanation}
-              </p>
-            )}
-          </div>
+                <span
+                  className="flex items-center gap-2 text-sm font-semibold font-nunito"
+                  style={{ color: "rgba(0,0,0,0.58)" }}
+                >
+                  <span aria-hidden>⚡</span>
+                  スマート解説
+                </span>
+                <span
+                  className="text-xs font-mono transition-transform duration-200"
+                  style={{
+                    color: "rgba(0,0,0,0.32)",
+                    display: "inline-block",
+                    transform: explanationOpen ? "rotate(180deg)" : "rotate(0deg)",
+                  }}
+                  aria-hidden
+                >
+                  ▼
+                </span>
+              </button>
 
-          <PushButton
-            type="button"
-            ref={nextButtonRef as React.Ref<HTMLButtonElement>}
-            onClick={onNext}
-            className="w-full"
-            aria-label={isLast ? "結果を見る" : "次の問題へ"}
-          >
-            {isLast ? "結果を見る" : "次へ →"}
-          </PushButton>
+              {/* 区切り線 */}
+              {explanationOpen && (
+                <div
+                  className="mx-4"
+                  style={{ height: "1px", background: "rgba(0,0,0,0.07)" }}
+                  aria-hidden
+                />
+              )}
+
+              {/* 解説本文 */}
+              {explanationOpen && (
+                <div
+                  id="quiz-explanation"
+                  className="px-4 pt-3 pb-4 animate-fade-in-up"
+                  style={{ boxShadow: "inset 0 2px 6px rgba(0,0,0,0.04)" }}
+                >
+                  <p className="text-sm text-pastel-ink/75 leading-relaxed">
+                    {current.explanation}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ─── 固定「次へ」バー ─────────────────────────────────────────── */}
+      {showFeedback && (
+        <div
+          className="fixed bottom-0 left-0 right-0 z-30 px-4 pt-3"
+          style={{
+            background: "linear-gradient(to top, #E8ECF2 65%, transparent)",
+            paddingBottom: "max(env(safe-area-inset-bottom, 0px), 16px)",
+          }}
+        >
+          <div className="max-w-2xl mx-auto">
+            <PushButton
+              type="button"
+              ref={nextButtonRef as React.Ref<HTMLButtonElement>}
+              onClick={onNext}
+              className="w-full"
+              aria-label={isLast ? "結果を見る" : "次の問題へ"}
+            >
+              {isLast ? "結果を見る" : "次へ"}
+            </PushButton>
+          </div>
         </div>
       )}
     </>

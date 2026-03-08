@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <defs>
+    <linearGradient id="bolt" x1="0.45" y1="0" x2="0.55" y2="1">
+      <stop offset="0%"   stop-color="#7ad800"/>
+      <stop offset="55%"  stop-color="#58cc02"/>
+      <stop offset="100%" stop-color="#3a9200"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="1.4" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- デスクトップサイドバー・ヘッダーと同じ白背景 -->
+  <rect width="32" height="32" rx="7" fill="#ffffff"/>
+
+  <!-- グロー（外縁の光輪） -->
+  <polygon
+    points="19,2 7,18 15,18 12,30 25,14 17,14"
+    fill="#58cc02"
+    opacity="0.22"
+    filter="url(#glow)"
+  />
+
+  <!-- メインボルト -->
+  <polygon
+    points="19,2 7,18 15,18 12,30 25,14 17,14"
+    fill="url(#bolt)"
+    filter="url(#glow)"
+  />
+
+  <!-- 白芯ハイライト -->
+  <polygon
+    points="18,5 11,17 15.5,17 13,27 22,15 17.5,15"
+    fill="rgba(255,255,255,0.35)"
+  />
+</svg>

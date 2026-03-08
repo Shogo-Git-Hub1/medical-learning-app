@@ -38,6 +38,43 @@ h1, h2, h3, h4 {
   font-family: var(--font-nunito), sans-serif;
 }
 
+/* ── クイズ選択肢ボタン 3D インタラクション ──────────────────────────
+   inline style の box-shadow (ledge) と組み合わせて立体感を演出する。
+   hover: 浮き上がり / active: ledge を踏み込むプレス                    */
+.quiz-option-3d {
+  transition: transform 150ms cubic-bezier(0.34, 1.1, 0.64, 1),
+              box-shadow 150ms ease,
+              opacity 200ms ease;
+}
+.quiz-option-3d:not([disabled]):hover {
+  transform: translateY(-3px);
+}
+.quiz-option-3d:not([disabled]):active {
+  transform: translateY(4px);
+  transition-duration: 80ms;
+}
+
+/* ── バー選択 pop アニメーション ──────────────────────────────────── */
+@keyframes quiz-bar-pop {
+  0%   { transform: scaleX(0.3); opacity: 0.5; }
+  60%  { transform: scaleX(1.2); opacity: 1;   }
+  80%  { transform: scaleX(0.92);               }
+  100% { transform: scaleX(1);                  }
+}
+.quiz-bar-pop {
+  transform-origin: left center;
+  animation: quiz-bar-pop 320ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* ── ボトムシート スライドアップ ──────────────────────────────────── */
+@keyframes slide-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0);    }
+}
+.animate-slide-up {
+  animation: slide-up 300ms cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
 @layer utilities {
   .neu-card {
     background: var(--neu-bg);

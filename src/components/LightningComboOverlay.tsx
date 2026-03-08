@@ -10,79 +10,113 @@ type Props = {
 };
 
 /**
- * 5の倍数コンボ達成時：画面全体に稲妻が走る＋フラッシュ＋「○コンボ！」を大きく一瞬表示
+ * 5の倍数コンボ達成時：
+ * - 黄色い放射状フラッシュ
+ * - リングバーストが中心から展開
+ * - コンボ数字が飛び出し、「コンボ！」がフェードイン
  */
 export function LightningComboOverlay({
   combo,
   onComplete,
-  duration = 1500,
+  duration = 1200,
 }: Props) {
   useEffect(() => {
-    const t = setTimeout(() => {
-      onComplete?.();
-    }, duration);
+    const t = setTimeout(() => onComplete?.(), duration);
     return () => clearTimeout(t);
   }, [duration, onComplete]);
 
   return (
-    <div
-      className="fixed inset-0 z-[100] pointer-events-none flex flex-col items-center justify-center animate-lightning-overlay-fade-out"
-      aria-live="polite"
-      aria-label={`${combo} コンボ達成`}
-    >
-      {/* 画面フラッシュ（淡く短め） */}
-      <div
-        className="absolute inset-0 bg-gradient-to-b from-yellow-100/60 via-amber-50/30 to-transparent animate-lightning-flash"
-        aria-hidden
-      />
+    <>
+      <style>{`
+        @keyframes combo-ring-burst {
+          0%   { transform: translate(-50%, -50%) scale(0.15); opacity: 0.95; }
+          65%  { opacity: 0.55; }
+          100% { transform: translate(-50%, -50%) scale(3.4); opacity: 0; }
+        }
+        @keyframes combo-num {
+          0%   { transform: translateY(36px) scale(0.55); opacity: 0; }
+          32%  { transform: translateY(-10px) scale(1.12); opacity: 1; }
+          52%  { transform: translateY(0) scale(1); }
+          78%  { opacity: 1; }
+          100% { opacity: 0; transform: scale(1.04); }
+        }
+        @keyframes combo-label {
+          0%   { transform: scale(0.75); opacity: 0; }
+          28%  { transform: scale(1.1); opacity: 1; }
+          50%  { transform: scale(1); }
+          78%  { opacity: 1; }
+          100% { opacity: 0; }
+        }
+      `}</style>
 
-      {/* 稲妻ボルト：シンプルな stroke パスで自然な形に */}
       <div
-        className="absolute top-0 left-1/2 h-[130vh] w-20 animate-lightning-bolt-fall"
-        aria-hidden
+        className="fixed inset-0 z-[100] pointer-events-none animate-lightning-overlay-fade-out"
+        aria-live="polite"
+        aria-label={`${combo} コンボ達成`}
       >
-        <svg
-          className="h-full w-full drop-shadow-[0_0_18px_rgba(255,210,0,0.9)]"
-          viewBox="0 0 60 520"
-          fill="none"
-          preserveAspectRatio="none"
-        >
-          {/* グロー（背景の光輪） */}
-          <path
-            d="M40 4 L20 258 L34 258 L14 516"
-            stroke="rgba(255,240,100,0.35)"
-            strokeWidth="28"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            vectorEffect="non-scaling-stroke"
-          />
-          {/* メインボルト */}
-          <path
-            d="M40 4 L20 258 L34 258 L14 516"
-            stroke="#FFEE44"
-            strokeWidth="10"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            vectorEffect="non-scaling-stroke"
-          />
-          {/* ハイライト（中央の白い芯） */}
-          <path
-            d="M40 4 L20 258 L34 258 L14 516"
-            stroke="rgba(255,255,255,0.85)"
-            strokeWidth="3"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            vectorEffect="non-scaling-stroke"
-          />
-        </svg>
-      </div>
+        {/* 背景フラッシュ（放射状グラデーション） */}
+        <div
+          className="absolute inset-0 animate-lightning-flash"
+          style={{
+            background:
+              "radial-gradient(ellipse at 50% 42%, rgba(255,230,60,0.68) 0%, rgba(255,200,0,0.28) 45%, transparent 70%)",
+          }}
+          aria-hidden
+        />
 
-      {/* 「○コンボ！」大きく一瞬表示 */}
-      <div className="relative z-10 mt-24 animate-combo-pop-text">
-        <span className="text-8xl font-bold tracking-tight text-white drop-shadow-[0_0_20px_rgba(0,0,0,0.6)]">
-          {combo} コンボ！
-        </span>
+        {/* リングバースト */}
+        <div
+          className="absolute"
+          style={{
+            top: "43%",
+            left: "50%",
+            width: "160px",
+            height: "160px",
+            borderRadius: "50%",
+            border: "3px solid rgba(255,222,0,0.9)",
+            boxShadow:
+              "0 0 32px rgba(255,200,0,0.65), inset 0 0 24px rgba(255,200,0,0.35)",
+            animation: "combo-ring-burst 0.5s ease-out 0.05s forwards",
+          }}
+          aria-hidden
+        />
+
+        {/* コンボテキスト */}
+        <div
+          className="absolute inset-0 flex flex-col items-center justify-center"
+          style={{ marginTop: "4vh" }}
+        >
+          <span
+            className="font-nunito"
+            style={{
+              fontSize: "7rem",
+              fontWeight: 1200,
+              lineHeight: 1,
+              color: "#fff",
+              textShadow:
+                "0 0 36px rgba(255,222,0,1), 0 0 72px rgba(255,180,0,0.65), 0 4px 28px rgba(0,0,0,0.6)",
+              animation: "combo-num 1.1s ease-out forwards",
+            }}
+            aria-hidden
+          >
+            {combo}
+          </span>
+          <span
+            className="font-nunito"
+            style={{
+              fontSize: "2.4rem",
+              fontWeight: 700,
+              color: "#fff",
+              textShadow:
+                "0 0 22px rgba(255,222,0,0.95), 0 2px 16px rgba(0,0,0,0.55)",
+              animation: "combo-label 1.1s ease-out 0.15s forwards",
+            }}
+            aria-hidden
+          >
+            コンボ！
+          </span>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

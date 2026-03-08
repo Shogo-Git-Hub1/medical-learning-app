@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import type { Lesson } from "@/types";
 import type { SubjectTheme } from "@/data/subjectThemes";
 import { getLessonStates, getCurrentLessonIndex } from "@/services/lessonService";
+import { PushButton } from "@/components/ui/PushButton";
 
 // 型は "use client" 不要な共有ファイルから再エクスポート（テーマ定数は @/data/subjectThemes から直接 import する方針）
 export type { SubjectTheme } from "@/data/subjectThemes";
@@ -97,25 +98,26 @@ export function LessonNode({ lesson, index, done, locked, isCurrent, theme, onTa
       : { ...labelBase, right: `calc(${(1 - xRatio) * 100}% + ${NODE_SIZE / 2 + 6}px)`, top: nodeTop + NODE_SIZE / 2, transform: "translateY(-50%)", textAlign: "right" };
 
   // ── Circle style ───────────────────────────────────────────────────────────
+  // 横幅に対して高さをわずかに縮めることで、
+  // 俯瞰から見た球体のような立体感を演出する
+  const NODE_OVAL_H = NODE_SIZE - 6; // 58px
   const circleStyle: React.CSSProperties = done
     ? {
-        width: NODE_SIZE, height: NODE_SIZE, borderRadius: "50%",
+        width: NODE_SIZE, height: NODE_OVAL_H, borderRadius: "50%",
         background: `linear-gradient(145deg, ${theme.grad0}, ${theme.grad1})`,
         boxShadow: `0 5px 0 ${theme.border}, 0 8px 20px ${theme.main}44`,
         display: "flex", alignItems: "center", justifyContent: "center",
       }
     : locked
     ? {
-        width: NODE_SIZE, height: NODE_SIZE, borderRadius: "50%",
+        width: NODE_SIZE, height: NODE_OVAL_H, borderRadius: "50%",
         background: "#E2E8F0", boxShadow: "0 5px 0 #A0AEC0",
         display: "flex", alignItems: "center", justifyContent: "center",
       }
     : {
-        width: NODE_SIZE, height: NODE_SIZE, borderRadius: "50%",
+        width: NODE_SIZE, height: NODE_OVAL_H, borderRadius: "50%",
         background: `linear-gradient(145deg, ${theme.grad0}, ${theme.grad1})`,
-        boxShadow: isCurrent
-          ? `0 5px 0 ${theme.border}, 0 10px 28px ${theme.main}55, 0 0 0 4px white, 0 0 0 7px ${theme.main}44`
-          : `0 5px 0 ${theme.border}, 0 6px 16px ${theme.main}33`,
+        boxShadow: `0 5px 0 ${theme.border}, 0 6px 16px ${theme.main}33`,
         display: "flex", alignItems: "center", justifyContent: "center",
       };
 
@@ -312,7 +314,7 @@ export function LessonPreviewSheet({
       <div
         className="absolute bottom-0 left-0 right-0 rounded-t-3xl"
         style={{
-          background: "var(--neu-bg)",
+          background: "#ffffff",
           transform: sheetTransform,
           transition: sheetTransition,
           boxShadow: "0 -8px 40px rgba(0,0,0,0.18)",
@@ -329,26 +331,11 @@ export function LessonPreviewSheet({
           <div className="w-10 h-1.5 rounded-full bg-gray-300" />
         </div>
 
-        {/* Colored header card */}
-        <div
-          className="mx-4 mb-4 rounded-2xl p-4 relative overflow-hidden"
-          style={{
-            background: `linear-gradient(135deg, ${theme.grad0}, ${theme.grad1})`,
-            boxShadow: `0 4px 16px ${theme.main}44`,
-          }}
-        >
-          <div className="absolute -right-6 -top-6 w-20 h-20 rounded-full bg-white/10" aria-hidden />
-          <div className="relative flex items-center gap-3">
-            <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-white/25 text-2xl select-none shrink-0">
-              {theme.icon}
-            </div>
-            <div className="min-w-0">
-              <p className="text-white/75 text-[11px] font-bold tracking-wide uppercase mb-0.5">
-                {done ? "完了済み" : locked ? "ロック中" : "次のレッスン"}
-              </p>
-              <p className="text-white font-bold text-base font-nunito leading-snug">{lesson.title}</p>
-            </div>
-          </div>
+        {/* Lesson title */}
+        <div className="px-5 pb-3">
+          <p className="text-base font-bold font-nunito leading-snug" style={{ color: "rgba(0,0,0,0.52)" }}>
+            {lesson.title}
+          </p>
         </div>
 
         {/* Body */}
@@ -413,18 +400,9 @@ export function LessonPreviewSheet({
                   </div>
                 )}
               </div>
-              <button
-                type="button"
-                onClick={handleStart}
-                className="w-full py-4 rounded-2xl font-bold text-base font-nunito transition-all duration-150 active:scale-[0.97]"
-                style={{
-                  background: `linear-gradient(135deg, ${theme.grad0}, ${theme.grad1})`,
-                  color: "white",
-                  boxShadow: `0 5px 0 ${theme.border}, 0 8px 20px ${theme.main}44`,
-                }}
-              >
+              <PushButton onClick={handleStart} className="w-full">
                 {done ? "もう一度挑戦する" : "スタート"}
-              </button>
+              </PushButton>
             </>
           )}
         </div>

@@ -20,6 +20,9 @@ export const metadata: Metadata = {
   title: "MediSpark",
   description: "医学の学習に火をつける。科目別で学ぶ、継続したくなる医療系学習アプリ",
   manifest: "/manifest.webmanifest",
+  icons: {
+    icon: "/icon.svg",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

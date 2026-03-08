@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import type { Question } from "@/types";
 import { useProgressContext } from "@/contexts/ProgressContext";
@@ -12,10 +11,11 @@ import { LightningComboOverlay } from "@/components/LightningComboOverlay";
 import { playCorrect, playWrong, playComplete } from "@/lib/sounds";
 import { getSessionIntroLine } from "@/data/characters";
 import type { CharacterId } from "@/types/characters";
-import { getNextLessonAfter } from "@/services/lessonService";
+import { getNextLessonAfter, getLessonWithQuestions } from "@/services/lessonService";
 import { QuizIntro } from "@/components/quiz/QuizIntro";
 import { QuizComplete } from "@/components/quiz/QuizComplete";
 import { QuizQuestion } from "@/components/quiz/QuizQuestion";
+import { QuizExitSheet } from "@/components/quiz/QuizExitSheet";
 
 const ALL_CHARACTER_IDS: CharacterId[] = ["skurun", "regi", "shirin"];
 
@@ -70,10 +70,23 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1,
     };
   }, []);
 
+  // 離脱確認シートの開閉
+  const [showExitSheet, setShowExitSheet] = useState(false);
+
+  // 科目ロードマップへのリンク（lessonId から科目を逆引き。見つからなければ backHref にフォールバック）
+  const subjectHref = useMemo(() => {
+    const subject = getLessonWithQuestions(lessonId)?.lesson.subject;
+    return subject ? `/subjects/${subject}` : backHref;
+  }, [lessonId, backHref]);
+
   const [index, setIndex] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
   const [results, setResults] = useState<boolean[]>([]);
+  // リトライ時にシャッフルを再実行するためのシード。
+  // lessonId のみを依存にしていると再挑戦時に同じ選択肢順になるため、
+  // handleRetry でインクリメントして再シャッフルを明示的に発火させる。
+  const [shuffleSeed, setShuffleSeed] = useState(0);
 
   const displayQuestions = useMemo(
     () =>
@@ -81,9 +94,13 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1,
         ...q,
         options: shuffle([...q.options]),
       })),
-    // レッスン切替時もシャッフルし直すため lessonId を依存に含める（eslint は未使用と判断するため無効化）
+    // 【重要】questions ではなく lessonId + shuffleSeed を依存にする。
+    // questions を依存に含めると、recordAnswer などでコンテキストが更新された際に
+    // 親が再レンダーして questions の参照が変わり、セッション途中で再シャッフルが
+    // 起きて「選択した瞬間に別の問題が表示される」バグの原因になる。
+    // shuffleSeed はリトライ時のみインクリメントされるため安全。
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [questions, lessonId]
+    [lessonId, shuffleSeed]
   );
 
   const current = displayQuestions[index];
@@ -97,15 +114,21 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1,
     return count;
   }, []);
 
+  // handleSelect の二重呼び出し（連打など）を防ぐフラグ。
+  // フィードバックが非表示になった（次問に進んだ）タイミングでリセットする。
+  const isSelectInFlight = useRef(false);
+
   const handleSelect = useCallback(
     (optionId: string) => {
-      if (showFeedback || !current) return;
+      if (showFeedback || !current || isSelectInFlight.current) return;
+      isSelectInFlight.current = true;
       const correctAnswer = optionId === current.correctOptionId;
       const comboBefore = getComboFromResults(results);
       const comboAfter = correctAnswer ? comboBefore + 1 : 0;
       setSelectedId(optionId);
       setShowFeedback(true);
       setResults((r) => [...r, correctAnswer]);
+      if (comboAfter > 0) setMaxCombo((prev) => Math.max(prev, comboAfter));
       recordAnswer(current.id, correctAnswer, comboAfter);
       if (correctAnswer) playCorrect();
       else playWrong();
@@ -114,6 +137,7 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1,
   );
 
   const displayCombo = getComboFromResults(results);
+  const [maxCombo, setMaxCombo] = useState(0);
   const [showCompleted, setShowCompleted] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [showLightningOverlay, setShowLightningOverlay] = useState(false);
@@ -121,14 +145,36 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1,
   useEffect(() => {
     if (showFeedback && isCorrect && displayCombo >= 5 && displayCombo % 5 === 0) {
       setShowLightningOverlay(true);
-      const t = setTimeout(() => setShowLightningOverlay(false), 1500);
+      const t = setTimeout(() => setShowLightningOverlay(false), 1200);
       return () => clearTimeout(t);
     } else {
       setShowLightningOverlay(false);
     }
   }, [showFeedback, isCorrect, displayCombo]);
 
+  // handleNext の二重呼び出し（Enterキーリピートなど）を防ぐフラグ。
+  // フィードバック非表示になったタイミングで useEffect がリセットする。
+  const handleRetry = useCallback(() => {
+    setShowCompleted(false);
+    setShowConfetti(false);
+    setShowLightningOverlay(false);
+    setIndex(0);
+    setSelectedId(null);
+    setShowFeedback(false);
+    setResults([]);
+    setMaxCombo(0);
+    setShuffleSeed((s) => s + 1);
+    isNextInFlight.current = false;
+    isSelectInFlight.current = false;
+  }, []);
+
+  const isNextInFlight = useRef(false);
+
   const handleNext = useCallback(() => {
+    // フィードバック未表示時の誤発火を防ぐ（showFeedback=false のまま次問に進まないよう）
+    if (!showFeedback) return;
+    if (isNextInFlight.current) return;
+    isNextInFlight.current = true;
     if (isLast) {
       // results には handleSelect 時点で最終回答が追加済みのため + (isCorrect ? 1 : 0) は不要
       const correctCount = results.filter(Boolean).length;
@@ -143,7 +189,7 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1,
       setSelectedId(null);
       setShowFeedback(false);
     }
-  }, [isLast, results, displayQuestions.length, lessonId, completeLesson]);
+  }, [showFeedback, isLast, results, displayQuestions.length, lessonId, completeLesson]);
 
   const questionRegionRef = useRef<HTMLDivElement>(null);
   const nextButtonRef = useRef<HTMLButtonElement>(null);
@@ -155,15 +201,32 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1,
   }, [index]);
 
   useEffect(() => {
-    if (showFeedback && nextButtonRef.current) {
-      nextButtonRef.current.focus({ preventScroll: true });
+    // フィードバックが消えたら（次問に進んだら）両ロックを解除する
+    if (!showFeedback) {
+      isNextInFlight.current = false;
+      isSelectInFlight.current = false;
     }
+  }, [showFeedback]);
+
+  useEffect(() => {
+    if (!showFeedback) return;
+    // requestAnimationFrame で 1 フレーム遅延させることで、
+    // 選択肢を押したキーイベント（Enter/Space）のバブルが完全に解決してから
+    // "次へ"ボタンにフォーカスを移す。これにより、キー押しっぱなしリピートで
+    // 即座に "次へ" が発火するのを防ぐ。
+    const raf = requestAnimationFrame(() => {
+      nextButtonRef.current?.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(raf);
   }, [showFeedback, index, results.length]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (!current) return;
       if (e.key === "Enter" && showFeedback) {
+        // "次へ"ボタン自身の Enter キーはブラウザのネイティブ click で処理済み。
+        // バブルアップによる handleNext の二重呼び出しを防ぐ。
+        if ((e.target as Element) === nextButtonRef.current) return;
         e.preventDefault();
         handleNext();
         return;
@@ -193,6 +256,8 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1,
         isGoodScore={isGoodScore}
         showConfetti={showConfetti}
         nextLesson={getNextLessonAfter(lessonId)}
+        maxCombo={maxCombo}
+        onRetry={handleRetry}
       />
     );
   }
@@ -211,9 +276,10 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1,
 
   // ─── × ボタン（イントロ・問題両フェーズ共通） ─────────────────────────
   const CloseButton = (
-    <Link
-      href={backHref}
+    <button
+      type="button"
       aria-label="レッスンを終了する"
+      onClick={() => setShowExitSheet(true)}
       className="flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-xl transition-all duration-150 active:scale-95"
       style={{
         background: "rgba(0,0,0,0.07)",
@@ -232,31 +298,42 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1,
       >
         <path d="M18 6L6 18M6 6l12 12" />
       </svg>
-    </Link>
+    </button>
   );
 
   // ─── イントロ画面 ─────────────────────────────────────────────────────
   if (showIntro) {
     return (
-      <div className="space-y-4 animate-fade-in-up">
-        {/* イントロヘッダー：×ボタン + レッスンタイトル */}
-        <div className="flex items-center gap-3 pt-1">
-          {CloseButton}
-          <span
-            className="text-sm font-bold font-nunito truncate"
-            style={{ color: "rgba(0,0,0,0.28)" }}
-          >
-            {lessonTitle}
-          </span>
+      <>
+        <div className="space-y-4 animate-fade-in-up">
+          {/* イントロヘッダー：×ボタン + レッスンタイトル */}
+          <div className="flex items-center gap-3 pt-1">
+            {CloseButton}
+            <span
+              className="text-sm font-bold font-nunito truncate"
+              style={{ color: "rgba(0,0,0,0.28)" }}
+            >
+              {lessonTitle}
+            </span>
+          </div>
+
+          <QuizIntro
+            introCharacter={introCharacter}
+            introLine={introLine}
+            introFading={introFading}
+            onSkip={skipIntro}
+          />
         </div>
 
-        <QuizIntro
-          introCharacter={introCharacter}
-          introLine={introLine}
-          introFading={introFading}
-          onSkip={skipIntro}
-        />
-      </div>
+        {/* 離脱確認ボトムシート（イントロ中も表示可能） */}
+        {showExitSheet && (
+          <QuizExitSheet
+            onResume={() => setShowExitSheet(false)}
+            exitHref={subjectHref}
+            remainingCount={displayQuestions.length}
+          />
+        )}
+      </>
     );
   }
 
@@ -269,6 +346,7 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1,
 
   // ─── クイズ本体 ──────────────────────────────────────────────────────
   return (
+    <>
     <div
       className="space-y-5 animate-fade-in-up"
       ref={questionRegionRef}
@@ -331,15 +409,7 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1,
                 {displayCombo}
               </span>
             </div>
-          ) : (
-            <span
-              className="text-[10px] font-mono hidden sm:inline"
-              style={{ color: "rgba(0,0,0,0.2)" }}
-              aria-hidden
-            >
-              1〜4
-            </span>
-          )}
+          ) : null}
         </div>
       </div>
 
@@ -354,7 +424,6 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1,
         showFeedback={showFeedback}
         isCorrect={isCorrect}
         isLast={isLast}
-        displayCombo={displayCombo}
         lessonId={lessonId}
         lessonTitle={lessonTitle}
         questionLabelId={questionLabelId}
@@ -363,6 +432,17 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1,
         onNext={handleNext}
         nextButtonRef={nextButtonRef}
       />
+
     </div>
+
+    {/* 離脱確認ボトムシート（animate-fade-in-up の transform 外に置かないと fixed が正しく効かない） */}
+    {showExitSheet && (
+      <QuizExitSheet
+        onResume={() => setShowExitSheet(false)}
+        exitHref={subjectHref}
+        remainingCount={displayQuestions.length - index}
+      />
+    )}
+    </>
   );
 }

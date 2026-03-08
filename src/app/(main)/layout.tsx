@@ -14,9 +14,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         <header
           className="md:hidden sticky top-0 z-10"
           style={{
-            background: "linear-gradient(135deg, #dbeeff 0%, #c8e0ff 100%)",
+            background: "#ffffff",
             boxShadow:
-              "0 4px 12px rgba(99,140,255,0.18), 0 1px 0 rgba(255,255,255,0.9), inset 0 1px 0 rgba(255,255,255,0.85)",
+              "0 4px 12px rgba(197,202,209,0.45), 0 1px 0 rgba(255,255,255,0.9)",
           }}
         >
           <div className="px-4 py-3 flex items-center">
@@ -38,7 +38,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             className="h-px"
             style={{
               background:
-                "linear-gradient(90deg, transparent, rgba(99,140,255,0.5) 30%, rgba(99,140,255,0.5) 70%, transparent)",
+                "linear-gradient(90deg, transparent, rgba(88,204,2,0.45) 30%, rgba(88,204,2,0.45) 70%, transparent)",
             }}
             aria-hidden
           />

@@ -9,7 +9,6 @@ import {
   findRecommendedLesson,
 } from "@/services/lessonService";
 import { SUBJECT_THEMES, DEFAULT_THEME } from "@/data/subjectThemes";
-import { NavigatorsImage } from "@/components/CharacterAvatar";
 import { CharacterLine } from "@/components/CharacterLine";
 import { getLastSubject, getLastLessonResult } from "@/lib/progress";
 import type { UserProgress, LastLessonResult } from "@/lib/progress";
@@ -310,7 +309,6 @@ export function HomeDashboard() {
     <div className="space-y-6">
       {/* ── Character + greeting ─────────────────────────────────────── */}
       <section className="animate-fade-in-up" style={{ animationFillMode: "both" }}>
-        <NavigatorsImage className="mb-4" />
         <CharacterLine characterId="skurun" lineKey="homeGreeting" size="sm" className="mb-4" />
       </section>
 
