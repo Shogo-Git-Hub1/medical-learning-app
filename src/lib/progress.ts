@@ -4,6 +4,8 @@
 export type QuestionReview = {
   nextReview: string; // YYYY-MM-DD
   interval: number;  // 日数
+  /** 過去に一度でも正解したかどうか（初回ボーナス XP の判定に使用） */
+  everCorrect?: boolean;
 };
 
 /** 進捗スキーマのバージョン。フィールド追加・変更時に上げ、migrate で古いデータを変換する */
@@ -22,6 +24,8 @@ export type UserProgress = {
   totalXP: number;
   completedLessonIds: string[];
   questionReviews: Record<string, QuestionReview>;
+  /** 学習した日付のリスト (YYYY-MM-DD)、最大90件 */
+  studyDates?: string[];
 };
 
 const STORAGE_KEY = "medical-learning-progress";
@@ -36,6 +40,7 @@ const DEFAULT: UserProgress = {
   totalXP: 0,
   completedLessonIds: [],
   questionReviews: {},
+  studyDates: [],
 };
 
 export function getDefaultProgress(): UserProgress {
@@ -68,6 +73,11 @@ function parsedToUserProgress(parsed: Record<string, unknown>): UserProgress {
       !Array.isArray(parsed.questionReviews)
         ? (parsed.questionReviews as Record<string, QuestionReview>)
         : base.questionReviews,
+    studyDates:
+      Array.isArray(parsed.studyDates) &&
+      parsed.studyDates.every((d): d is string => typeof d === "string")
+        ? parsed.studyDates
+        : base.studyDates,
   };
 }
 
@@ -183,32 +193,28 @@ export function getToday(): string {
   return d.toISOString().slice(0, 10);
 }
 
-/** 1問正解で得られる XP（コンボなし時） */
-export const XP_PER_CORRECT = 10;
+/** 初回正解で得られる XP（コンボなし時） */
+export const XP_FIRST_CORRECT = 10;
+/** 2回目以降の正解で得られる XP（コンボなし時） */
+export const XP_PER_CORRECT = 1;
 
 /**
- * 連続正解コンボに応じた XP 倍率（Duolingo 風）
- * 1 → 1x, 2 → 1.5x, 3 → 2x, 5+ → 2.5x
+ * 連続正解コンボに応じた XP 倍率
+ * コンボ 5 の倍数ごとに 0.1 倍ずつ増加（5→1.1x, 10→1.2x, 15→1.3x, ...）
  */
-const COMBO_MULTIPLIERS: Record<number, number> = {
-  1: 1,
-  2: 1.5,
-  3: 2,
-  4: 2,
-  5: 2.5,
-};
-const COMBO_MAX_TIER = 5;
-
-/** コンボ数から XP 倍率を返す（1以上の整数） */
 export function getComboMultiplier(combo: number): number {
   if (combo <= 0) return 1;
-  return COMBO_MULTIPLIERS[Math.min(combo, COMBO_MAX_TIER)] ?? COMBO_MULTIPLIERS[COMBO_MAX_TIER];
+  return 1 + Math.floor(combo / 5) * 0.1;
 }
 
-/** 正解時の獲得 XP（コンボ倍率込み）。不正解は 0 なので correct 時のみ呼ぶ */
-export function getXPForCorrect(combo: number): number {
-  const mult = getComboMultiplier(combo);
-  return Math.round(XP_PER_CORRECT * mult);
+/**
+ * 正解時の獲得 XP（コンボ倍率込み、小数第1位まで）。
+ * isFirstTime=true のとき初回ボーナス（10 XP基本）、false のとき周回分（1 XP基本）。
+ * 不正解は 0 なので correct 時のみ呼ぶ。
+ */
+export function getXPForCorrect(combo: number, isFirstTime: boolean): number {
+  const base = isFirstTime ? XP_FIRST_CORRECT : XP_PER_CORRECT;
+  return Math.round(base * getComboMultiplier(combo) * 10) / 10;
 }
 
 const MIN_INTERVAL = 1;
@@ -250,17 +256,27 @@ export function applyAnswerToProgress(
     const yesterdayStr = yesterday.toISOString().slice(0, 10);
     streak = lastDay === yesterdayStr ? progress.streakDays + 1 : 1;
   }
-  const xpGain = correct ? getXPForCorrect(combo) : 0;
+  const isFirstTime = correct && !progress.questionReviews[questionId]?.everCorrect;
+  const xpGain = correct ? getXPForCorrect(combo, isFirstTime) : 0;
+  const prevStudyDates = progress.studyDates ?? [];
+  const studyDates = prevStudyDates.includes(today)
+    ? prevStudyDates
+    : [...prevStudyDates, today].slice(-90);
   return {
     ...progress,
     lastStudyDate: today,
     streakDays: streak,
+    studyDates,
     dailyAnswered: progress.dailyResetDate === today ? progress.dailyAnswered + 1 : 1,
     dailyResetDate: progress.dailyResetDate || today,
     totalXP: progress.totalXP + xpGain,
     questionReviews: {
       ...progress.questionReviews,
-      [questionId]: { nextReview, interval: nextInterval },
+      [questionId]: {
+        nextReview,
+        interval: nextInterval,
+        everCorrect: correct ? true : (prevReview?.everCorrect ?? false),
+      },
     },
   };
 }

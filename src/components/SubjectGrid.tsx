@@ -9,12 +9,6 @@ export function SubjectGrid() {
   const { progress } = useProgressContext();
   const grouped = getLessonsGroupedBySubject();
 
-  // Find the first subject that still has uncompleted lessons → "next recommended"
-  const nextSubjectIndex = SUBJECT_DISPLAY_ORDER.findIndex((subject) => {
-    const lessons = grouped[subject] ?? [];
-    return lessons.length > 0 && lessons.some((l) => !progress.completedLessonIds.includes(l.id));
-  });
-
   return (
     <div className="grid grid-cols-2 gap-3">
       {SUBJECT_DISPLAY_ORDER.map((subject, i) => {
@@ -25,7 +19,6 @@ export function SubjectGrid() {
         const pct       = total > 0 ? (completed / total) * 100 : 0;
 
         const isDone = total > 0 && completed === total;
-        const isNext = i === nextSubjectIndex;
 
         return (
           <Link
@@ -34,24 +27,15 @@ export function SubjectGrid() {
             className="block rounded-2xl p-4 relative overflow-hidden transition-all duration-150 active:scale-[0.96] animate-card-enter"
             style={{
               background: `linear-gradient(145deg, ${theme.grad0}, ${theme.grad1})`,
-              boxShadow: isNext
-                ? `0 5px 0 ${theme.border}, 0 10px 28px ${theme.main}55, 0 0 0 3px white, 0 0 0 5px ${theme.main}44`
-                : `0 4px 0 ${theme.border}, 0 6px 16px ${theme.main}33`,
+              boxShadow: `0 4px 0 ${theme.border}, 0 6px 16px ${theme.main}33`,
               animationDelay: `${i * 35}ms`,
               animationFillMode: "both",
             }}
-            aria-label={isDone ? `${subject}（完了）` : isNext ? `${subject}（おすすめ）` : subject}
+            aria-label={isDone ? `${subject}（完了）` : subject}
           >
             {/* Decorative circles */}
             <div className="absolute -right-5 -top-5 w-16 h-16 rounded-full bg-white/10" aria-hidden />
             <div className="absolute -right-1 bottom-[-12px] w-9 h-9 rounded-full bg-white/10" aria-hidden />
-
-            {/* NEXT badge */}
-            {isNext && (
-              <span className="absolute top-2 left-2 text-[8px] font-bold font-nunito tracking-wider px-1.5 py-0.5 rounded-full bg-white/30 text-white">
-                おすすめ
-              </span>
-            )}
 
             {/* Done badge */}
             {isDone && (
@@ -75,7 +59,7 @@ export function SubjectGrid() {
               </p>
 
               {/* Progress bar */}
-              <div className="h-1.5 rounded-full bg-white/30 overflow-hidden">
+              <div className="h-2 rounded-full bg-black/20 overflow-hidden">
                 <div
                   className="h-full rounded-full bg-white transition-all duration-700 ease-out"
                   style={{ width: `${pct}%` }}

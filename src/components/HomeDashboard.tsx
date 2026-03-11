@@ -7,9 +7,10 @@ import {
   getLessonsGroupedBySubject,
   getDueReviewQuestionIdsThatExist,
   findRecommendedLesson,
+  getQuestionsById,
+  REVIEW_BATCH_SIZE,
 } from "@/services/lessonService";
 import { SUBJECT_THEMES, DEFAULT_THEME } from "@/data/subjectThemes";
-import { CharacterLine } from "@/components/CharacterLine";
 import { getLastSubject, getLastLessonResult } from "@/lib/progress";
 import type { UserProgress, LastLessonResult } from "@/lib/progress";
 import type { Lesson } from "@/types";
@@ -22,9 +23,10 @@ type StatCardProps = {
   sub: string;
   color: string;
   delay?: string;
+  progress?: number;
 };
 
-function StatCard({ icon, title, value, sub, color, delay = "0ms" }: StatCardProps) {
+function StatCard({ icon, title, value, sub, color, delay = "0ms", progress }: StatCardProps) {
   return (
     <div
       className="rounded-2xl p-4 relative overflow-hidden animate-fade-in-up"
@@ -40,8 +42,59 @@ function StatCard({ icon, title, value, sub, color, delay = "0ms" }: StatCardPro
         <p className="text-[10px] font-bold uppercase tracking-widest mt-1" style={{ color: `${color}cc` }}>{title}</p>
         <p className="font-bold text-lg font-nunito leading-none" style={{ color }}>{value}</p>
         <p className="text-[10px] leading-snug text-pastel-ink/50">{sub}</p>
+        {progress !== undefined && (
+          <div className="mt-2 h-1.5 rounded-full overflow-hidden" style={{ background: `${color}20` }}>
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{ width: `${Math.min(100, Math.max(0, progress * 100))}%`, background: color }}
+            />
+          </div>
+        )}
       </div>
     </div>
+  );
+}
+
+// ─── DailyGoalBanner ───────────────────────────────────────────────────────────
+function DailyGoalBanner({ progress }: { progress: UserProgress }) {
+  if (progress.dailyAnswered < progress.dailyGoal) return null;
+
+  return (
+    <section
+      className="animate-fade-in-up"
+      style={{ animationDelay: "220ms", animationFillMode: "both" }}
+    >
+      <div
+        className="flex items-center justify-between rounded-2xl px-4 py-3.5"
+        style={{
+          background: "linear-gradient(135deg, #d7ffb8, #b8f5a0)",
+          border: "1.5px solid #58cc02",
+          boxShadow: "0 4px 0 #46a302",
+        }}
+      >
+        <div className="flex items-center gap-2.5">
+          <span className="text-xl select-none" aria-hidden>🎉</span>
+          <div>
+            <p className="text-sm font-bold font-nunito" style={{ color: "#2d7a00" }}>
+              今日の目標を達成！
+            </p>
+            <p className="text-xs" style={{ color: "#46a302" }}>
+              {progress.dailyAnswered} 問クリア
+            </p>
+          </div>
+        </div>
+        <Link
+          href="/subjects"
+          className="rounded-xl px-4 py-2 font-bold text-sm font-nunito text-white transition-all duration-150 active:translate-y-0.5 active:shadow-none"
+          style={{
+            background: "#58cc02",
+            boxShadow: "0 3px 0 #46a302",
+          }}
+        >
+          もっとやる
+        </Link>
+      </div>
+    </section>
   );
 }
 
@@ -107,9 +160,6 @@ function TodayLessonCard({ progress }: { progress: UserProgress }) {
         className="animate-fade-in-up"
         style={{ animationDelay: "240ms", animationFillMode: "both" }}
       >
-        <h2 className="text-xs font-bold text-pastel-ink/50 mb-3 font-mono uppercase tracking-widest">
-          今日のレッスン
-        </h2>
         <div
           className="rounded-2xl overflow-hidden"
           style={{
@@ -145,7 +195,7 @@ function TodayLessonCard({ progress }: { progress: UserProgress }) {
   const isRetry        = rec.kind === "retry";
   const lastAccuracy   = rec.lastAccuracy;
   const theme          = SUBJECT_THEMES[subject] ?? DEFAULT_THEME;
-  const questionCount  = lesson.questionIds.length;
+  const questionCount  = getQuestionsById(lesson.questionIds).length;
   const xpEstimate     = questionCount * 10;
 
   return (
@@ -153,10 +203,6 @@ function TodayLessonCard({ progress }: { progress: UserProgress }) {
       className="animate-fade-in-up"
       style={{ animationDelay: "240ms", animationFillMode: "both" }}
     >
-      <h2 className="text-xs font-bold text-pastel-ink/50 mb-3 font-mono uppercase tracking-widest">
-        今日のレッスン
-      </h2>
-
       {/* Card */}
       <div
         className="rounded-2xl overflow-hidden"
@@ -171,8 +217,8 @@ function TodayLessonCard({ progress }: { progress: UserProgress }) {
           <div className="absolute right-4 bottom-[-16px] w-14 h-14 rounded-full bg-white/10" aria-hidden />
 
           <div className="relative">
-            {/* Subject label + retry badge */}
-            <div className="flex items-center justify-between mb-3">
+            {/* Subject label */}
+            <div className="mb-3">
               <Link
                 href={`/subjects/${encodeURIComponent(subject)}`}
                 className="inline-flex items-center gap-1.5 rounded-lg px-2 py-0.5 -mx-2 transition-all duration-150 active:scale-[0.95] bg-white/10 hover:bg-white/20"
@@ -181,17 +227,21 @@ function TodayLessonCard({ progress }: { progress: UserProgress }) {
                 <span className="text-white text-xs font-bold tracking-wide">{subject}</span>
                 <span className="text-white/60 text-[10px]">›</span>
               </Link>
-              {isRetry && lastAccuracy !== undefined && (
-                <span className="text-[10px] font-bold bg-white/20 text-white rounded-full px-2 py-0.5">
-                  前回 {Math.round(lastAccuracy * 100)}%
-                </span>
-              )}
             </div>
 
             {/* Lesson title */}
-            <p className="text-white font-bold text-lg font-nunito leading-tight mb-4">
+            <p className={`text-white font-bold text-lg font-nunito leading-tight ${isRetry && lastAccuracy !== undefined ? "mb-1.5" : "mb-4"}`}>
               {lesson.title}
             </p>
+
+            {/* 再挑戦コンテキスト：前回スコアに応じた動的メッセージ */}
+            {isRetry && lastAccuracy !== undefined && (
+              <p className="text-white/75 text-xs mb-4 leading-relaxed">
+                {lastAccuracy < 0.6
+                  ? `前回 ${Math.round(lastAccuracy * 100)}% — 一緒に復習しよう`
+                  : `前回 ${Math.round(lastAccuracy * 100)}% — もう少しで合格点！`}
+              </p>
+            )}
 
             {/* Stats row */}
             <div className="flex gap-2">
@@ -210,14 +260,16 @@ function TodayLessonCard({ progress }: { progress: UserProgress }) {
         {/* Bottom: Start button */}
         <Link
           href={`/lesson/${lesson.id}?from=/`}
-          className="block mx-4 mb-4 py-3.5 rounded-2xl text-center font-bold text-base font-nunito transition-all duration-150 active:scale-[0.97]"
+          className="block mx-4 mb-4 py-3.5 rounded-2xl text-center font-bold text-base font-nunito transition-all duration-150 active:scale-[0.97] active:translate-y-1"
           style={{
             background: "white",
             color: theme.border,
-            boxShadow: `0 3px 0 ${theme.border}44`,
+            boxShadow: `0 4px 0 ${theme.border}`,
           }}
         >
-          {isRetry ? "もう一度挑戦 →" : "スタート →"}
+          {isRetry
+            ? (lastAccuracy !== undefined && lastAccuracy >= 0.6 ? "合格点を目指す！" : "もう一度挑戦")
+            : "スタート"}
         </Link>
       </div>
     </div>
@@ -225,36 +277,63 @@ function TodayLessonCard({ progress }: { progress: UserProgress }) {
 }
 
 // ─── ReviewQueueCard ───────────────────────────────────────────────────────────
-function ReviewQueueCard({ progress }: { progress: UserProgress }) {
-  const dueCount = getDueReviewQuestionIdsThatExist(progress).length;
-
+function ReviewQueueCard({ dueCount }: { dueCount: number }) {
   if (dueCount === 0) return null;
 
-  return (
-    <section
-      className="animate-fade-in-up"
-      style={{ animationDelay: "260ms", animationFillMode: "both" }}
-    >
-      <Link
-        href="/review"
-        className="flex items-center justify-between rounded-2xl px-5 py-4 transition-all duration-150 active:scale-[0.97]"
-        style={{
-          background: "linear-gradient(135deg, #7E57C2, #512DA8)",
-          boxShadow: "0 4px 0 #311B92, 0 6px 20px rgba(126,87,194,0.35)",
-        }}
-      >
-        <div className="flex items-center gap-3">
-          <span className="text-2xl select-none" aria-hidden>🧠</span>
-          <div>
-            <p className="text-white font-bold text-sm font-nunito">
-              復習が {dueCount} 問あります
-            </p>
-            <p className="text-white/65 text-xs mt-0.5">間隔反復で記憶を定着させよう</p>
-          </div>
+  const label = dueCount > REVIEW_BATCH_SIZE
+    ? `まずは ${REVIEW_BATCH_SIZE} 問から始めよう`
+    : "間隔反復で記憶を定着させよう";
+
+  const inner = (
+    <>
+      <div className="flex items-center gap-3">
+        <span className="text-2xl select-none" aria-hidden>🧠</span>
+        <div>
+          <p className="text-white font-bold text-sm font-nunito">
+            復習が {dueCount} 問あります
+          </p>
+          <p className="text-white/65 text-xs mt-0.5">{label}</p>
         </div>
-        <span className="text-white/80 text-xl font-bold" aria-hidden>›</span>
-      </Link>
-    </section>
+      </div>
+      <span className="text-white/80 text-xl font-bold" aria-hidden>›</span>
+    </>
+  );
+
+  return (
+    <>
+      {/* ── モバイル: BottomNav の上に固定フローティング ─────────── */}
+      <div
+        className="md:hidden fixed left-0 right-0 z-10 px-4"
+        style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 72px)" }}
+      >
+        <div className="max-w-2xl mx-auto">
+          <Link
+            href="/review"
+            className="animate-float-bob flex items-center justify-between rounded-2xl px-5 py-3.5 transition-all duration-150 active:scale-[0.97]"
+            style={{
+              background: "linear-gradient(135deg, #7E57C2, #512DA8)",
+            }}
+          >
+            {inner}
+          </Link>
+        </div>
+      </div>
+
+      {/* ── デスクトップ: コンテンツエリア下部に固定フローティング ── */}
+      <div className="hidden md:block md:fixed md:bottom-6 md:left-[240px] md:right-0 md:z-10 md:px-4">
+        <div className="max-w-2xl mx-auto">
+          <Link
+            href="/review"
+            className="animate-float-bob flex items-center justify-between rounded-2xl px-5 py-3.5 transition-all duration-150 hover:opacity-90 active:scale-[0.97]"
+            style={{
+              background: "linear-gradient(135deg, #7E57C2, #512DA8)",
+            }}
+          >
+            {inner}
+          </Link>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -266,36 +345,25 @@ function SubjectShortcuts() {
     setLastSubjectState(getLastSubject());
   }, []);
 
+  if (!lastSubject) return null;
+
   return (
     <section
-      className="flex gap-3 animate-fade-in-up"
+      className="animate-fade-in-up"
       style={{ animationDelay: "280ms", animationFillMode: "both" }}
     >
-      {lastSubject && (
-        <Link
-          href={`/subjects/${encodeURIComponent(lastSubject)}`}
-          className="flex-1 rounded-2xl py-3.5 px-4 text-center transition-all duration-150 active:scale-[0.97] active:translate-y-0.5"
-          style={{
-            background: "var(--neu-bg)",
-            boxShadow: "0 4px 0 rgba(88,204,2,0.35), 0 6px 16px rgba(88,204,2,0.15), var(--neu-shadow-sm)",
-            border: "1.5px solid rgba(88,204,2,0.25)",
-          }}
-        >
-          <p className="text-sm font-bold font-nunito" style={{ color: "var(--pastel-primary)" }}>
-            {lastSubject} を続ける
-          </p>
-        </Link>
-      )}
       <Link
-        href="/subjects"
-        className="flex-1 rounded-2xl py-3.5 px-4 text-center transition-all duration-150 active:scale-[0.97] active:translate-y-0.5"
+        href={`/subjects/${encodeURIComponent(lastSubject)}`}
+        className="block w-full rounded-2xl py-3.5 px-4 text-center transition-all duration-150 active:scale-[0.97] active:translate-y-1"
         style={{
-          background: "var(--neu-bg)",
-          boxShadow: "0 4px 0 rgba(0,0,0,0.12), var(--neu-shadow-sm)",
-          border: "1.5px solid rgba(0,0,0,0.07)",
+          background: "#edfde0",
+          boxShadow: "0 4px 0 #46a302",
+          border: "1.5px solid #58cc02",
         }}
       >
-        <p className="text-sm font-bold font-nunito text-pastel-ink">科目を変える</p>
+        <p className="text-sm font-bold font-nunito" style={{ color: "#46a302" }}>
+          {lastSubject} を続ける
+        </p>
       </Link>
     </section>
   );
@@ -304,19 +372,27 @@ function SubjectShortcuts() {
 // ─── HomeDashboard ─────────────────────────────────────────────────────────────
 export function HomeDashboard() {
   const { progress, level, xpNeededForNext } = useProgressContext();
+  const dueCount = getDueReviewQuestionIdsThatExist(progress).length;
 
   return (
     <div className="space-y-6">
-      {/* ── Character + greeting ─────────────────────────────────────── */}
-      <section className="animate-fade-in-up" style={{ animationFillMode: "both" }}>
-        <CharacterLine characterId="skurun" lineKey="homeGreeting" size="sm" className="mb-4" />
-      </section>
+      {/* ── モバイル専用ロゴヘッダー（スクロールに追従） ─────────────── */}
+      <div className="md:hidden flex items-center gap-2 pb-1">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
+          <path
+            d="M13 2L4.5 13.5H11.5L10.5 22L19.5 10.5H12.5L13 2Z"
+            fill="#58cc02"
+            stroke="#46a302"
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+          />
+        </svg>
+        <span className="text-[#58cc02] font-bold text-xl font-nunito">MediSpark</span>
+      </div>
 
       {/* ── Stat cards ───────────────────────────────────────────────── */}
       <section>
-        <h2 className="text-xs font-bold text-pastel-ink/50 mb-3 font-mono uppercase tracking-widest">
-          今日の学習
-        </h2>
         <div className="grid grid-cols-3 gap-3">
           <StatCard
             icon="🔥" title="ストリーク"
@@ -327,9 +403,10 @@ export function HomeDashboard() {
             icon={progress.dailyAnswered >= progress.dailyGoal ? "✅" : "🎯"}
             title="デイリーミッション"
             value={`${progress.dailyAnswered} / ${progress.dailyGoal} 問`}
-            sub={progress.dailyAnswered >= progress.dailyGoal ? "今日の目標達成！" : "今日の目標"}
+            sub={progress.dailyAnswered >= progress.dailyGoal ? "今日の目標達成！" : `あと ${progress.dailyGoal - progress.dailyAnswered} 問`}
             color={progress.dailyAnswered >= progress.dailyGoal ? "#FFC800" : "#43A047"}
             delay="120ms"
+            progress={progress.dailyGoal > 0 ? Math.min(1, progress.dailyAnswered / progress.dailyGoal) : 0}
           />
           <Link href="/profile" className="block">
             <StatCard
@@ -342,15 +419,20 @@ export function HomeDashboard() {
         </div>
       </section>
 
+      {/* ── Daily goal achievement banner ────────────────────────────── */}
+      <DailyGoalBanner progress={progress} />
+
       {/* ── Today's lesson ───────────────────────────────────────────── */}
       <TodayLessonCard progress={progress} />
 
       {/* ── Review queue ─────────────────────────────────────────────── */}
-      <ReviewQueueCard progress={progress} />
+      <ReviewQueueCard dueCount={dueCount} />
 
       {/* ── Subject shortcuts ────────────────────────────────────────── */}
       <SubjectShortcuts />
 
+      {/* フローティングカード分のスペーサー（固定カードがコンテンツを隠さないよう確保） */}
+      {dueCount > 0 && <div className="h-20" aria-hidden />}
 
     </div>
   );

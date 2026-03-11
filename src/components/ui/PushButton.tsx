@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { forwardRef } from "react";
 
-type ButtonVariant = "primary" | "secondary" | "outline" | "chip" | "chipActive" | "option" | "optionCorrect" | "optionWrong";
+type ButtonVariant = "primary" | "secondary" | "outline" | "amber" | "slate" | "chip" | "chipActive" | "option" | "optionCorrect" | "optionWrong";
 
 const variantStyles: Record<
   ButtonVariant,
@@ -11,43 +11,55 @@ const variantStyles: Record<
 > = {
   primary: {
     base: "bg-pastel-primary text-white border-0",
-    shadow: "shadow-[4px_4px_10px_rgba(197,202,209,0.7),-4px_-4px_10px_rgba(255,255,255,0.9),0_0_14px_rgba(88,204,2,0.35)]",
-    active: "translate-y-[2px] shadow-[inset_3px_3px_6px_rgba(70,163,2,0.4),inset_-2px_-2px_5px_rgba(120,220,40,0.3)]",
+    shadow: "shadow-[0_4px_0_#46a302]",
+    active: "translate-y-[4px] shadow-[0_0_0_#46a302]",
   },
   secondary: {
     base: "bg-pastel-blue text-pastel-ink border-0",
-    shadow: "shadow-[4px_4px_10px_rgba(197,202,209,0.7),-4px_-4px_10px_rgba(255,255,255,0.9),0_0_14px_rgba(187,242,255,0.4)]",
-    active: "translate-y-[2px] shadow-[inset_3px_3px_6px_rgba(125,217,237,0.4),inset_-2px_-2px_5px_rgba(200,250,255,0.4)]",
+    shadow: "shadow-[0_4px_0_#7dd9ed]",
+    active: "translate-y-[4px] shadow-[0_0_0_#7dd9ed]",
   },
   outline: {
-    base: "bg-neu text-pastel-ink border border-pastel-border/60",
-    shadow: "shadow-[4px_4px_8px_rgba(197,202,209,0.7),-4px_-4px_8px_rgba(255,255,255,0.9)]",
-    active: "translate-y-[2px] shadow-[inset_3px_3px_6px_rgba(197,202,209,0.5),inset_-3px_-3px_6px_rgba(255,255,255,0.8)]",
+    base: "bg-white text-pastel-ink border border-pastel-border",
+    shadow: "shadow-[0_4px_0_#d1d5db]",
+    active: "translate-y-[3px] shadow-[0_1px_0_#d1d5db]",
+  },
+  /** リトライ・間違え直し用の暖色ボタン */
+  amber: {
+    base: "bg-[#f97316] text-white border-0",
+    shadow: "shadow-[0_4px_0_#c2410c]",
+    active: "translate-y-[4px] shadow-[0_0_0_#c2410c]",
+  },
+  /** 科目一覧・ホームなど中性ナビゲーション用 */
+  slate: {
+    base: "bg-[#f1f5f9] text-[#475569] border border-[#e2e8f0]",
+    shadow: "shadow-[0_4px_0_#cbd5e1]",
+    active: "translate-y-[3px] shadow-[0_1px_0_#cbd5e1]",
   },
   chip: {
-    base: "rounded-full px-4 py-2 text-sm font-medium bg-neu text-pastel-ink border border-pastel-border/40",
-    shadow: "shadow-[3px_3px_6px_rgba(197,202,209,0.6),-3px_-3px_6px_rgba(255,255,255,0.85)]",
-    active: "translate-y-[1px] shadow-[inset_2px_2px_4px_rgba(197,202,209,0.5),inset_-2px_-2px_4px_rgba(255,255,255,0.8)]",
+    base: "rounded-full px-4 py-2 text-sm font-medium bg-white text-pastel-ink border border-pastel-border",
+    shadow: "shadow-[0_3px_0_#d1d5db]",
+    active: "translate-y-[2px] shadow-[0_1px_0_#d1d5db]",
   },
   chipActive: {
     base: "rounded-full px-4 py-2 text-sm font-medium bg-pastel-primary text-white border-0",
-    shadow: "shadow-[3px_3px_6px_rgba(197,202,209,0.6),-3px_-3px_6px_rgba(255,255,255,0.85),0_0_10px_rgba(88,204,2,0.3)]",
-    active: "translate-y-[1px] shadow-[inset_2px_2px_4px_rgba(70,163,2,0.4),inset_-2px_-2px_4px_rgba(120,220,40,0.3)]",
+    shadow: "shadow-[0_3px_0_#46a302]",
+    active: "translate-y-[2px] shadow-[0_1px_0_#46a302]",
   },
   option: {
-    base: "w-full rounded-xl p-4 text-left font-medium text-pastel-ink bg-neu border border-pastel-primary/20",
-    shadow: "shadow-[4px_4px_8px_rgba(197,202,209,0.6),-4px_-4px_8px_rgba(255,255,255,0.9)]",
-    active: "translate-y-[2px] shadow-[inset_3px_3px_6px_rgba(197,202,209,0.5),inset_-3px_-3px_6px_rgba(255,255,255,0.8)]",
+    base: "w-full rounded-2xl p-4 text-left font-medium text-pastel-ink bg-white border border-pastel-border",
+    shadow: "shadow-[0_4px_0_#d1d5db]",
+    active: "translate-y-[3px] shadow-[0_1px_0_#d1d5db]",
   },
   optionCorrect: {
-    base: "w-full rounded-xl p-4 text-left font-medium text-pastel-ink border border-pastel-success bg-pastel-mint",
-    shadow: "shadow-[4px_4px_8px_rgba(197,202,209,0.6),-4px_-4px_8px_rgba(255,255,255,0.9),0_0_12px_rgba(88,204,2,0.35)]",
-    active: "translate-y-[2px] shadow-[inset_3px_3px_6px_rgba(72,140,62,0.4)]",
+    base: "w-full rounded-2xl p-4 text-left font-medium text-pastel-ink border-2 border-[#58cc02] bg-[#d7ffb8]",
+    shadow: "shadow-[0_4px_0_rgba(70,163,2,0.55)]",
+    active: "translate-y-[3px] shadow-[0_1px_0_rgba(70,163,2,0.55)]",
   },
   optionWrong: {
-    base: "w-full rounded-xl p-4 text-left font-medium text-pastel-ink border border-pastel-error bg-pastel-rose/60",
-    shadow: "shadow-[4px_4px_8px_rgba(197,202,209,0.6),-4px_-4px_8px_rgba(255,255,255,0.9)]",
-    active: "translate-y-[2px] shadow-[inset_3px_3px_6px_rgba(180,80,80,0.3)]",
+    base: "w-full rounded-2xl p-4 text-left font-medium text-pastel-ink border-2 border-[#ea2b2b] bg-[#ffd6d6]",
+    shadow: "shadow-[0_4px_0_rgba(180,50,50,0.25)]",
+    active: "translate-y-[3px] shadow-[0_1px_0_rgba(180,50,50,0.25)]",
   },
 };
 

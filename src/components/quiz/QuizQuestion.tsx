@@ -4,8 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import type { Question } from "@/types";
 import { PushButton } from "@/components/ui/PushButton";
-import { CharacterLine } from "@/components/CharacterLine";
-import { getOptionStyle, OPTION_ACCENTS } from "@/components/quiz/quizOptionStyles";
+import { getOptionStyle } from "@/components/quiz/quizOptionStyles";
 
 function ReportQuestionLink({
   lessonId,
@@ -63,12 +62,14 @@ export type QuizQuestionProps = {
   onSelect: (optionId: string) => void;
   onNext: () => void;
   nextButtonRef: React.RefObject<HTMLButtonElement | null>;
+  onConfirm: () => void;
+  confirmButtonRef: React.RefObject<HTMLButtonElement | null>;
 };
 
 /**
  * 1問分の表示：問題カード・選択肢・正誤フィードバック。
- * - 回答後の「次へ」ボタンは画面下部に固定表示
- * - 解説は「スマート解説」ボタンで折りたたみ展開
+ * - 回答後のフィードバック・スマート解説・「次へ」ボタンは画面下部の固定バーに統合
+ * - 正解時は緑、不正解時は赤のバー背景
  */
 export function QuizQuestion({
   current,
@@ -83,24 +84,15 @@ export function QuizQuestion({
   onSelect,
   onNext,
   nextButtonRef,
+  onConfirm,
+  confirmButtonRef,
 }: QuizQuestionProps) {
   const [explanationOpen, setExplanationOpen] = useState(false);
-  // 正解アニメーションが完了してからキャラクターコメントを表示する（50ms遅延）
-  const [showComment, setShowComment] = useState(false);
 
-  // 新しい問題に進んだら解説・コメントを閉じる
+  // 新しい問題に進んだら解説を閉じる
   useEffect(() => {
     setExplanationOpen(false);
   }, [current.id]);
-
-  useEffect(() => {
-    if (!showFeedback) {
-      setShowComment(false);
-      return;
-    }
-    const t = setTimeout(() => setShowComment(true), 50);
-    return () => clearTimeout(t);
-  }, [showFeedback]);
 
   return (
     <>
@@ -126,9 +118,8 @@ export function QuizQuestion({
         {current.options.map((opt, optionIndex) => {
           const chosen = selectedId === opt.id;
           const isRight = opt.id === current.correctOptionId;
-          const accent = OPTION_ACCENTS[optionIndex % OPTION_ACCENTS.length];
           const optionNumber = optionIndex + 1;
-          const { shadowStyle, borderColor, bgColor, barColor, barGlow } = getOptionStyle(
+          const { shadowStyle, borderColor, bgColor } = getOptionStyle(
             showFeedback,
             chosen,
             isRight
@@ -136,9 +127,6 @@ export function QuizQuestion({
           const isWrongChosen = showFeedback && chosen && !isRight;
           const isCorrectReveal = showFeedback && isRight;
           const isDimmed = showFeedback && !isRight && !chosen;
-
-          const resolvedBarColor = barColor ?? accent.bar;
-          const resolvedBarGlow = barGlow ?? `0 0 8px ${accent.shadow}`;
 
           return (
             <li key={opt.id}>
@@ -149,13 +137,13 @@ export function QuizQuestion({
                 disabled={showFeedback}
                 className={[
                   "quiz-option-3d",
-                  "w-full rounded-xl overflow-hidden",
-                  "flex items-stretch",
+                  "w-full rounded-2xl",
+                  "flex items-center justify-center",
                   "font-medium text-pastel-ink",
                   "disabled:cursor-default",
                   isWrongChosen && "animate-feedback-shake",
                   isCorrectReveal && "animate-option-correct-pop",
-                  isDimmed && "opacity-55",
+                  isDimmed && "opacity-50",
                 ]
                   .filter(Boolean)
                   .join(" ")}
@@ -166,175 +154,178 @@ export function QuizQuestion({
                   transition: "transform 150ms ease, box-shadow 150ms ease, opacity 200ms ease",
                 }}
               >
-                {/* 左アクセントバー */}
-                {!isDimmed && (
-                  <span
-                    className={[
-                      "w-[5px] flex-shrink-0 rounded-l-[9px] transition-colors duration-300",
-                      chosen && "quiz-bar-pop",
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
-                    style={{
-                      background: `linear-gradient(
-                        180deg,
-                        rgba(255,255,255,0.38) 0%,
-                        rgba(255,255,255,0.08) 45%,
-                        rgba(0,0,0,0.12) 100%
-                      ), ${resolvedBarColor}`,
-                      boxShadow: resolvedBarGlow,
-                    }}
-                    aria-hidden
-                  />
-                )}
-
-                {/* テキスト中央配置 */}
-                <span className="flex-1 flex items-center justify-center py-4 px-4 text-sm leading-snug text-center min-h-[52px]">
+                <span className="py-4 px-5 text-sm leading-snug text-center min-h-[52px] flex items-center">
                   {opt.text}
                 </span>
-
-                {/* 右アクセントバー */}
-                {!isDimmed && (
-                  <span
-                    className={[
-                      "w-[5px] flex-shrink-0 rounded-r-[9px] transition-colors duration-300",
-                      chosen && "quiz-bar-pop",
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
-                    style={{
-                      background: `linear-gradient(
-                        180deg,
-                        rgba(255,255,255,0.38) 0%,
-                        rgba(255,255,255,0.08) 45%,
-                        rgba(0,0,0,0.12) 100%
-                      ), ${resolvedBarColor}`,
-                      boxShadow: resolvedBarGlow,
-                    }}
-                    aria-hidden
-                  />
-                )}
               </button>
             </li>
           );
         })}
       </ul>
 
-      {/* ─── フィードバックセクション ────────────────────────────────── */}
-      {showComment && (
-        // pb-24 で固定「次へ」バーに隠れないようにする
-        <div className="space-y-3 animate-fade-in-up pb-24">
-          {/* キャラクターコメント */}
-          {isCorrect ? (
-            <CharacterLine
-              characterId="skurun"
-              lineKey="quizCorrect"
-              variant="correct"
-              size="sm"
-              className="animate-feedback-pop"
-            />
-          ) : (
-            <>
-              <CharacterLine
-                characterId="skurun"
-                lineKey="quizWrong"
-                variant="wrong"
-                size="sm"
-              />
-              {correctOptionText && (
-                <CharacterLine
-                  characterId="regi"
-                  lineKey="regiExplanation"
-                  replacements={{ correct: correctOptionText }}
-                  size="sm"
-                />
-              )}
-            </>
-          )}
-
-          {/* スマート解説（ボタン＋本文を1つのカードとして結合） */}
-          {current.explanation && (
-            <div
-              className="overflow-hidden transition-all duration-200"
-              style={{
-                background: "var(--neu-bg)",
-                boxShadow: "var(--neu-shadow-sm)",
-                borderRadius: "12px",
-              }}
-            >
-              {/* ヘッダーボタン */}
+      {/* 解答確認バー：選択済みでフィードバック前のみ表示 */}
+      {selectedId !== null && !showFeedback && (
+        <>
+          <div className="h-24" aria-hidden />
+          <div
+            className="fixed bottom-0 left-0 right-0 z-20 animate-slide-up"
+            style={{
+              background: "#ffffff",
+              borderTop: "2px solid rgba(0,0,0,0.07)",
+              paddingBottom: "max(env(safe-area-inset-bottom, 0px), 16px)",
+            }}
+          >
+            <div className="max-w-2xl mx-auto px-4 pt-4">
               <button
                 type="button"
-                onClick={() => setExplanationOpen((v) => !v)}
-                className="w-full flex items-center justify-between px-4 py-2.5 transition-colors duration-150"
-                aria-expanded={explanationOpen}
-                aria-controls="quiz-explanation"
+                ref={confirmButtonRef as React.Ref<HTMLButtonElement>}
+                onClick={onConfirm}
+                className="w-full rounded-xl min-h-[48px] py-3 px-5 font-semibold text-white transition-all duration-150 active:translate-y-1 active:transition-none select-none"
+                style={{
+                  background: "#58cc02",
+                  boxShadow: "0 4px 0 #46a302",
+                }}
               >
-                <span
-                  className="flex items-center gap-2 text-sm font-semibold font-nunito"
-                  style={{ color: "rgba(0,0,0,0.58)" }}
-                >
-                  <span aria-hidden>⚡</span>
-                  スマート解説
-                </span>
-                <span
-                  className="text-xs font-mono transition-transform duration-200"
-                  style={{
-                    color: "rgba(0,0,0,0.32)",
-                    display: "inline-block",
-                    transform: explanationOpen ? "rotate(180deg)" : "rotate(0deg)",
-                  }}
-                  aria-hidden
-                >
-                  ▼
-                </span>
+                解答する
               </button>
-
-              {/* 区切り線 */}
-              {explanationOpen && (
-                <div
-                  className="mx-4"
-                  style={{ height: "1px", background: "rgba(0,0,0,0.07)" }}
-                  aria-hidden
-                />
-              )}
-
-              {/* 解説本文 */}
-              {explanationOpen && (
-                <div
-                  id="quiz-explanation"
-                  className="px-4 pt-3 pb-4 animate-fade-in-up"
-                  style={{ boxShadow: "inset 0 2px 6px rgba(0,0,0,0.04)" }}
-                >
-                  <p className="text-sm text-pastel-ink/75 leading-relaxed">
-                    {current.explanation}
-                  </p>
-                </div>
-              )}
             </div>
-          )}
-        </div>
+          </div>
+        </>
       )}
 
-      {/* ─── 固定「次へ」バー ─────────────────────────────────────────── */}
+      {/* スペーサー：固定バーに隠れないようにする */}
+      {showFeedback && <div className="h-56" aria-hidden />}
+
+      {/* ─── 固定フィードバックバー ──────────────────────────────────── */}
       {showFeedback && (
         <div
-          className="fixed bottom-0 left-0 right-0 z-30 px-4 pt-3"
+          className="fixed bottom-0 left-0 right-0 z-30 animate-slide-up"
           style={{
-            background: "linear-gradient(to top, #E8ECF2 65%, transparent)",
+            background: isCorrect ? "#d7ffb8" : "#ffd6d6",
+            borderTop: `2px solid ${isCorrect ? "rgba(88,167,0,0.35)" : "rgba(234,43,43,0.3)"}`,
             paddingBottom: "max(env(safe-area-inset-bottom, 0px), 16px)",
           }}
         >
-          <div className="max-w-2xl mx-auto">
-            <PushButton
-              type="button"
-              ref={nextButtonRef as React.Ref<HTMLButtonElement>}
-              onClick={onNext}
-              className="w-full"
-              aria-label={isLast ? "結果を見る" : "次の問題へ"}
-            >
-              {isLast ? "結果を見る" : "次へ"}
-            </PushButton>
+          <div className="max-w-2xl mx-auto px-4 pt-4 space-y-3">
+            {/* フィードバックラベル */}
+            <div className="flex items-center gap-2.5 animate-feedback-pop">
+              <span
+                aria-hidden
+                style={{
+                  color: isCorrect ? "#58a700" : "#ea2b2b",
+                  fontSize: "1.4rem",
+                  lineHeight: 1,
+                }}
+              >
+                {isCorrect ? "✓" : "✗"}
+              </span>
+              <div>
+                <p
+                  className="font-bold font-nunito text-base leading-tight"
+                  style={{ color: isCorrect ? "#58a700" : "#ea2b2b" }}
+                >
+                  {isCorrect ? "正解！" : "不正解..."}
+                </p>
+                {!isCorrect && correctOptionText && (
+                  <p className="text-xs mt-0.5" style={{ color: "rgba(0,0,0,0.5)" }}>
+                    正解は「{correctOptionText}」
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* スマート解説（ボタン＋本文を1つのカードとして結合） */}
+            {current.explanation && (
+              <div
+                className="overflow-hidden"
+                style={{
+                  background: "var(--neu-bg)",
+                  boxShadow: "var(--neu-shadow-sm)",
+                  borderRadius: "12px",
+                }}
+              >
+                {/* ヘッダーボタン */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = !explanationOpen;
+                    setExplanationOpen(next);
+                    if (next) window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                  className="w-full flex items-center justify-between px-4 py-2.5 transition-colors duration-150"
+                  aria-expanded={explanationOpen}
+                  aria-controls="quiz-explanation"
+                >
+                  <span
+                    className="flex items-center gap-2 text-sm font-semibold font-nunito"
+                    style={{ color: "rgba(0,0,0,0.58)" }}
+                  >
+                    <span aria-hidden>⚡</span>
+                    スマート解説
+                  </span>
+                  <span
+                    className="text-xs font-mono transition-transform duration-200"
+                    style={{
+                      color: "rgba(0,0,0,0.32)",
+                      display: "inline-block",
+                      transform: explanationOpen ? "rotate(180deg)" : "rotate(0deg)",
+                    }}
+                    aria-hidden
+                  >
+                    ▼
+                  </span>
+                </button>
+
+                {/* 区切り線 */}
+                {explanationOpen && (
+                  <div
+                    className="mx-4"
+                    style={{ height: "1px", background: "rgba(0,0,0,0.07)" }}
+                    aria-hidden
+                  />
+                )}
+
+                {/* 解説本文 */}
+                {explanationOpen && (
+                  <div
+                    id="quiz-explanation"
+                    className="px-4 pt-3 pb-4 animate-fade-in-up"
+                    style={{ boxShadow: "inset 0 2px 6px rgba(0,0,0,0.04)" }}
+                  >
+                    <p className="text-sm text-pastel-ink/75 leading-relaxed">
+                      {current.explanation}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 次へボタン：正解時はPrimary（緑）、不正解時は赤塗りつぶし */}
+            {isCorrect ? (
+              <PushButton
+                type="button"
+                ref={nextButtonRef as React.Ref<HTMLButtonElement>}
+                onClick={onNext}
+                className="w-full"
+                aria-label={isLast ? "結果を見る" : "次の問題へ"}
+              >
+                {isLast ? "結果を見る" : "次へ"}
+              </PushButton>
+            ) : (
+              <button
+                type="button"
+                ref={nextButtonRef as React.Ref<HTMLButtonElement>}
+                onClick={onNext}
+                aria-label={isLast ? "結果を見る" : "次の問題へ"}
+                className="w-full rounded-xl min-h-[48px] py-3 px-5 font-semibold text-white transition-all duration-150 active:translate-y-1 active:transition-none select-none"
+                style={{
+                  background: "#ea2b2b",
+                  boxShadow: "0 4px 0 #b91c1c",
+                }}
+              >
+                {isLast ? "結果を見る" : "次へ"}
+              </button>
+            )}
           </div>
         </div>
       )}

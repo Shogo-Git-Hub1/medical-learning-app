@@ -17,8 +17,18 @@ export type QuizCompleteProps = {
   nextLesson: Lesson | null;
   /** セッション中の最大連続正解数 */
   maxCombo?: number;
+  /** セッションで獲得した XP（コンボ倍率込み） */
+  earnedXP?: number;
   /** もう一度挑戦ボタン押下時のコールバック */
   onRetry?: () => void;
+  /** 間違えた問題数（0 のとき「間違えた問題だけもう一度」ボタンを非表示） */
+  wrongCount?: number;
+  /** 間違えた問題だけ再挑戦するコールバック */
+  onRetryWrong?: () => void;
+  /** 復習セッション限定: 次バッチの残り問題数（0 のとき「次へ」ボタンを非表示） */
+  remainingReviewCount?: number;
+  /** 復習セッション限定: 「次の復習問題へ」ボタン押下時のコールバック */
+  onNextReviewBatch?: () => void;
 };
 
 /** 正答率からスター数（1〜3）を計算 */
@@ -71,11 +81,22 @@ export function QuizComplete({
   showConfetti,
   nextLesson,
   maxCombo = 0,
+  earnedXP = 0,
   onRetry,
+  wrongCount = 0,
+  onRetryWrong,
+  remainingReviewCount = 0,
+  onNextReviewBatch,
 }: QuizCompleteProps) {
   const pct = total > 0 ? Math.round((correctCount / total) * 100) : 0;
   const displayPct = useCountUp(pct, 900, 350);
+  const displayXPRaw = useCountUp(Math.round(earnedXP * 10), 900, 350);
+  const displayXP = (displayXPRaw / 10).toFixed(1);
   const starCount = getStarCount(pct);
+
+  // 正答率に応じたスコアカラー（緑 ≥80% / 黄 ≥60% / 赤 <60%）
+  const scoreColor = pct >= 80 ? "#58cc02" : pct >= 60 ? "#d97706" : "#ea2b2b";
+  const scoreGlowRgb = pct >= 80 ? "88,204,2" : pct >= 60 ? "217,119,6" : "234,43,43";
 
   return (
     <>
@@ -86,8 +107,8 @@ export function QuizComplete({
           100% { transform: scale(1) rotate(0deg); opacity: 1; }
         }
         @keyframes score-glow-pulse {
-          0%, 100% { text-shadow: 0 0 22px rgba(88,204,2,0.52), 0 0 44px rgba(88,204,2,0.22); }
-          50%       { text-shadow: 0 0 34px rgba(88,204,2,0.78), 0 0 64px rgba(88,204,2,0.38); }
+          0%, 100% { text-shadow: 0 0 22px rgba(${scoreGlowRgb},0.52), 0 0 44px rgba(${scoreGlowRgb},0.22); }
+          50%       { text-shadow: 0 0 34px rgba(${scoreGlowRgb},0.78), 0 0 64px rgba(${scoreGlowRgb},0.38); }
         }
         @keyframes combo-badge-in {
           0%   { transform: scale(0.7) translateY(8px); opacity: 0; }
@@ -138,12 +159,12 @@ export function QuizComplete({
           <div className="flex flex-col items-center gap-1">
             <div className="flex items-end gap-1 leading-none">
               <span
-                className="font-bold font-nunito text-pastel-primary"
+                className="font-bold font-nunito"
                 style={{
                   fontSize: "5.75rem",
                   lineHeight: 1,
-                  textShadow:
-                    "0 0 22px rgba(88,204,2,0.52), 0 0 44px rgba(88,204,2,0.22)",
+                  color: scoreColor,
+                  textShadow: `0 0 22px rgba(${scoreGlowRgb},0.52), 0 0 44px rgba(${scoreGlowRgb},0.22)`,
                   animation: "score-glow-pulse 2.2s ease-in-out 1.3s infinite",
                 }}
                 aria-label={`${pct}パーセント`}
@@ -151,11 +172,12 @@ export function QuizComplete({
                 {displayPct}
               </span>
               <span
-                className="font-bold font-nunito text-pastel-primary pb-2"
+                className="font-bold font-nunito pb-2"
                 style={{
                   fontSize: "2.5rem",
+                  color: scoreColor,
                   opacity: 0.72,
-                  textShadow: "0 0 16px rgba(88,204,2,0.4)",
+                  textShadow: `0 0 16px rgba(${scoreGlowRgb},0.4)`,
                 }}
                 aria-hidden
               >
@@ -165,6 +187,25 @@ export function QuizComplete({
             <span className="text-sm text-pastel-ink/45 font-mono">
               {correctCount} / {total} 問正解
             </span>
+            {earnedXP > 0 && (
+              <div
+                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 mt-1"
+                style={{
+                  background: "rgba(255,200,0,0.13)",
+                  border: "1.5px solid rgba(255,200,0,0.40)",
+                  animation: "combo-badge-in 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.9s both",
+                }}
+              >
+                <span aria-hidden className="text-sm leading-none">⚡</span>
+                <span
+                  className="text-sm font-bold font-nunito"
+                  style={{ color: "#d97706" }}
+                  aria-label={`+${earnedXP.toFixed(1)} XP獲得`}
+                >
+                  +{displayXP} XP
+                </span>
+              </div>
+            )}
           </div>
 
           {/* 最大コンボバッジ（3以上のとき表示） */}
@@ -197,44 +238,80 @@ export function QuizComplete({
 
         {/* ─── CTAボタン ────────────────────────────────────────── */}
         <div className="space-y-3">
-          {/* Primary CTA：高得点なら「次のレッスンへ」、そうでなければ「もう一度挑戦」 */}
-          {isGoodScore && nextLesson ? (
-            <PushButton
-              href={`/lesson/${nextLesson.id}?from=/subjects`}
-              className="w-full"
-            >
-              次のレッスンへ
-            </PushButton>
-          ) : lessonId !== "review" ? (
-            <PushButton
-              onClick={onRetry}
-              className="w-full"
-            >
-              もう一度挑戦
-            </PushButton>
-          ) : null}
-
-          {/* Secondary CTA：高得点時→「もう一度挑戦」、低得点時→「次のレッスンへ」を追加 */}
-          {isGoodScore && lessonId !== "review" && (
-            <PushButton onClick={onRetry} variant="outline" className="w-full">
-              もう一度挑戦
-            </PushButton>
-          )}
-          {!isGoodScore && nextLesson && lessonId !== "review" && (
-            <PushButton
-              href={`/lesson/${nextLesson.id}?from=/subjects`}
-              variant="outline"
-              className="w-full"
-            >
-              次のレッスンへ
-            </PushButton>
+          {lessonId === "review" ? (
+            <>
+              {/* 復習セッション Primary CTA：続きがあれば「次の復習問題へ」 */}
+              {remainingReviewCount > 0 && (
+                <PushButton onClick={onNextReviewBatch} className="w-full">
+                  次の復習問題へ（残り {remainingReviewCount} 問）
+                </PushButton>
+              )}
+              {/* 復習セッション Secondary CTA：もう一度挑戦 */}
+              <PushButton onClick={onRetry} variant="amber" className="w-full">
+                もう一度挑戦
+              </PushButton>
+            </>
+          ) : isGoodScore ? (
+            <>
+              {/* 高得点: Primary は「次のレッスンへ」、なければ「もう一度挑戦」 */}
+              {nextLesson ? (
+                <PushButton
+                  href={`/lesson/${nextLesson.id}?from=/subjects`}
+                  className="w-full"
+                >
+                  次のレッスンへ
+                </PushButton>
+              ) : (
+                <PushButton onClick={onRetry} variant="amber" className="w-full">
+                  もう一度挑戦
+                </PushButton>
+              )}
+              {/* 間違えがあれば「間違えた N 問だけもう一度」を追加 */}
+              {wrongCount > 0 && onRetryWrong && (
+                <PushButton onClick={onRetryWrong} variant="amber" className="w-full">
+                  間違えた {wrongCount} 問だけもう一度
+                </PushButton>
+              )}
+              {/* 次があるときだけ「もう一度挑戦」も出す */}
+              {nextLesson && (
+                <PushButton onClick={onRetry} variant="outline" className="w-full">
+                  もう一度挑戦
+                </PushButton>
+              )}
+            </>
+          ) : (
+            <>
+              {/* 低得点: 間違えた問題に絞った再挑戦を Primary に昇格 */}
+              {onRetryWrong && wrongCount > 0 ? (
+                <>
+                  <PushButton onClick={onRetryWrong} variant="amber" className="w-full">
+                    間違えた {wrongCount} 問だけもう一度
+                  </PushButton>
+                  <PushButton onClick={onRetry} variant="outline" className="w-full">
+                    もう一度挑戦（全問）
+                  </PushButton>
+                </>
+              ) : (
+                <PushButton onClick={onRetry} variant="amber" className="w-full">
+                  もう一度挑戦
+                </PushButton>
+              )}
+              {nextLesson && (
+                <PushButton
+                  href={`/lesson/${nextLesson.id}?from=/subjects`}
+                  className="w-full"
+                >
+                  次のレッスンへ
+                </PushButton>
+              )}
+            </>
           )}
 
           <div className="flex gap-3">
-            <PushButton href="/subjects" variant="outline" className="flex-1">
+            <PushButton href="/subjects" variant="slate" className="flex-1">
               科目一覧へ
             </PushButton>
-            <PushButton href="/" variant="outline" className="flex-1">
+            <PushButton href="/" variant="slate" className="flex-1">
               ホーム
             </PushButton>
           </div>

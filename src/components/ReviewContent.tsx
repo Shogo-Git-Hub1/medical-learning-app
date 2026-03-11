@@ -1,25 +1,40 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { loadProgress } from "@/lib/progress";
 import {
-  getQuestionsById,
-  getDueReviewQuestionIdsThatExist,
+  getDueReviewQuestionsSortedByOldest,
+  REVIEW_BATCH_SIZE,
 } from "@/services/lessonService";
 import { QuizSession } from "@/components/QuizSession";
 import type { Question } from "@/types";
 
 export function ReviewContent() {
-  const [questions, setQuestions] = useState<Question[] | null>(null);
+  const [batchQuestions, setBatchQuestions] = useState<Question[] | null>(null);
+  const [remainingCount, setRemainingCount] = useState(0);
+  // key をインクリメントすることで QuizSession を完全に再マウントしてバッチを切り替える
+  const [sessionKey, setSessionKey] = useState(0);
 
-  useEffect(() => {
+  const loadBatch = useCallback(() => {
     const { progress } = loadProgress();
-    const dueIds = getDueReviewQuestionIdsThatExist(progress);
-    setQuestions(getQuestionsById(dueIds));
+    const allDue = getDueReviewQuestionsSortedByOldest(progress);
+    const batch = allDue.slice(0, REVIEW_BATCH_SIZE);
+    setBatchQuestions(batch);
+    setRemainingCount(Math.max(0, allDue.length - batch.length));
   }, []);
 
-  if (questions === null) {
+  useEffect(() => {
+    loadBatch();
+  }, [loadBatch]);
+
+  // QuizComplete の「次の復習問題へ」ボタンから呼ばれる
+  const handleNextBatch = useCallback(() => {
+    loadBatch();
+    setSessionKey((k) => k + 1);
+  }, [loadBatch]);
+
+  if (batchQuestions === null) {
     return (
       <div className="neu-inset rounded-2xl p-10 text-center animate-fade-in-up">
         <p className="text-pastel-ink/70 text-sm font-nunito">読み込み中…</p>
@@ -27,7 +42,7 @@ export function ReviewContent() {
     );
   }
 
-  if (questions.length === 0) {
+  if (batchQuestions.length === 0) {
     return (
       <div className="neu-inset rounded-2xl p-10 text-center space-y-3 animate-fade-in-up">
         <p className="text-5xl select-none">✅</p>
@@ -46,10 +61,14 @@ export function ReviewContent() {
 
   return (
     <QuizSession
-      questions={questions}
+      key={sessionKey}
+      questions={batchQuestions}
       lessonId="review"
-      lessonTitle={`復習セッション（${questions.length}問）`}
+      lessonTitle={`復習セッション（${batchQuestions.length}問）`}
       backHref="/"
+      remainingReviewCount={remainingCount}
+      onNextReviewBatch={handleNextBatch}
+      initialShowIntro={sessionKey === 0}
     />
   );
 }

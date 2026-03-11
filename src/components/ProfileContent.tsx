@@ -82,6 +82,19 @@ export function ProfileContent() {
         />
       </div>
 
+      {/* ── 学習カレンダー ───────────────────────────────────── */}
+      <div
+        className="animate-fade-in-up"
+        style={{ animationDelay: "100ms", animationFillMode: "both" }}
+      >
+        <p className="text-[10px] font-mono text-pastel-ink/40 uppercase tracking-widest mb-3">
+          学習カレンダー（直近28日）
+        </p>
+        <div className="neu-card rounded-2xl p-4">
+          <StudyCalendar studyDates={progress.studyDates ?? []} />
+        </div>
+      </div>
+
       {/* ── 科目別進捗 ────────────────────────────────────────── */}
       <div
         className="animate-fade-in-up"
@@ -181,6 +194,49 @@ export function ProfileContent() {
           <span className="text-pastel-ink/30 text-xl" aria-hidden>›</span>
         </Link>
       </div>
+    </div>
+  );
+}
+
+// ─── StudyCalendar ─────────────────────────────────────────────────────────────
+function StudyCalendar({ studyDates }: { studyDates: string[] }) {
+  const studySet = new Set(studyDates);
+  const today = new Date();
+  const todayStr = today.toISOString().slice(0, 10);
+
+  const days = Array.from({ length: 28 }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(d.getDate() - (27 - i));
+    const dateStr = d.toISOString().slice(0, 10);
+    return { date: dateStr, day: d.getDate(), isToday: dateStr === todayStr };
+  });
+
+  const studiedCount = days.filter((d) => studySet.has(d.date)).length;
+
+  return (
+    <div>
+      <div className="grid grid-cols-7 gap-1.5 mb-3">
+        {days.map(({ date, day, isToday }) => {
+          const studied = studySet.has(date);
+          return (
+            <div
+              key={date}
+              className="aspect-square rounded-[6px] flex items-center justify-center text-[9px] font-mono font-bold"
+              style={{
+                background: studied ? "#58cc02" : "rgba(0,0,0,0.06)",
+                color: studied ? "white" : "rgba(0,0,0,0.25)",
+                outline: isToday ? "2px solid #58cc02" : "none",
+                outlineOffset: "2px",
+              }}
+            >
+              {day}
+            </div>
+          );
+        })}
+      </div>
+      <p className="text-[10px] font-mono text-pastel-ink/40 text-right">
+        直近28日で <span style={{ color: "#58cc02" }}>{studiedCount}日</span> 学習
+      </p>
     </div>
   );
 }

@@ -30,7 +30,7 @@ const config: Config = {
           "blue-dark": "#7DD9ED",
           cream: "#FFFBF5",
           ink: "#3C3C3C",
-          border: "#AFAFAF",
+          border: "#E5E7EB",
           card: "#FFFFFF",
           slate: "#E8E8E8",
           mint: "#E8F5E0",
@@ -40,8 +40,8 @@ const config: Config = {
           orange: "#FFC800",
           "orange-dark": "#E6B800",
         },
-        /** ニューモーフィズム背景 */
-        neu: "#E8ECF2",
+        /** クリーン白背景 */
+        neu: "#ffffff",
         /** 藍色：クイズ画面の背景（視認性向上） */
         indigo: {
           quiz: "#1a365d",
@@ -85,12 +85,12 @@ const config: Config = {
           "0%, 70%": { opacity: "1" },
           "100%": { opacity: "0" },
         },
-        /** 正解した選択肢がポンと前に出る */
+        /** 正解した選択肢がポンと前に出る（フラット ledge スタイル対応） */
         "option-correct-pop": {
-          "0%": { transform: "scale(1) translateY(0)", boxShadow: "0 3px 0 0 rgba(72,140,62,0.5)" },
-          "35%": { transform: "scale(1.08) translateY(-8px)", boxShadow: "0 12px 24px -8px rgba(70,163,2,0.4)" },
-          "70%": { transform: "scale(1.03) translateY(-3px)", boxShadow: "0 6px 12px -4px rgba(70,163,2,0.35)" },
-          "100%": { transform: "scale(1.02) translateY(-2px)", boxShadow: "0 4px 8px -2px rgba(70,163,2,0.3)" },
+          "0%": { transform: "scale(1) translateY(0)", boxShadow: "0 4px 0 rgba(70,163,2,0.55)" },
+          "35%": { transform: "scale(1.06) translateY(-6px)", boxShadow: "0 8px 20px rgba(70,163,2,0.25)" },
+          "70%": { transform: "scale(1.02) translateY(-3px)", boxShadow: "0 5px 12px rgba(70,163,2,0.18)" },
+          "100%": { transform: "scale(1.02) translateY(-2px)", boxShadow: "0 4px 0 rgba(70,163,2,0.55)" },
         },
         /** 雷が上から下へ降りてくる（ボルト本体の移動） */
         "lightning-bolt-fall": {
@@ -141,10 +141,10 @@ const config: Config = {
           from: { opacity: "0", transform: "translateY(14px) scale(0.96)" },
           to: { opacity: "1", transform: "translateY(0) scale(1)" },
         },
-        /** 近未来UI: グリーングロウのパルス */
+        /** グリーングロウのパルス（白背景対応） */
         "pulse-glow": {
-          "0%, 100%": { boxShadow: "0 0 8px rgba(88,204,2,0.3), 4px 4px 8px rgba(197,202,209,0.7), -4px -4px 8px rgba(255,255,255,0.9)" },
-          "50%": { boxShadow: "0 0 22px rgba(88,204,2,0.65), 0 0 44px rgba(88,204,2,0.2), 4px 4px 8px rgba(197,202,209,0.7), -4px -4px 8px rgba(255,255,255,0.9)" },
+          "0%, 100%": { boxShadow: "0 0 8px rgba(88,204,2,0.3), 0 2px 8px rgba(0,0,0,0.08)" },
+          "50%": { boxShadow: "0 0 22px rgba(88,204,2,0.65), 0 0 44px rgba(88,204,2,0.2), 0 2px 8px rgba(0,0,0,0.08)" },
         },
         /** ロード中…のドット点滅 */
         "dot-blink": {

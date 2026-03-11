@@ -81,25 +81,27 @@ describe("progress", () => {
       expect(getComboMultiplier(0)).toBe(1);
       expect(getComboMultiplier(-1)).toBe(1);
     });
-    it("1→1, 2→1.5, 3→2, 5以上→2.5", () => {
+    it("1〜4→1.0, 5〜9→1.1, 10〜14→1.2", () => {
       expect(getComboMultiplier(1)).toBe(1);
-      expect(getComboMultiplier(2)).toBe(1.5);
-      expect(getComboMultiplier(3)).toBe(2);
-      expect(getComboMultiplier(4)).toBe(2);
-      expect(getComboMultiplier(5)).toBe(2.5);
-      expect(getComboMultiplier(10)).toBe(2.5);
+      expect(getComboMultiplier(4)).toBe(1);
+      expect(getComboMultiplier(5)).toBe(1.1);
+      expect(getComboMultiplier(9)).toBe(1.1);
+      expect(getComboMultiplier(10)).toBe(1.2);
     });
   });
 
   describe("getXPForCorrect", () => {
-    it("コンボ1で10XP", () => {
-      expect(getXPForCorrect(1)).toBe(10);
+    it("初回・コンボ1で10XP", () => {
+      expect(getXPForCorrect(1, true)).toBe(10);
     });
-    it("コンボ2で15XP（1.5x）", () => {
-      expect(getXPForCorrect(2)).toBe(15);
+    it("初回・コンボ5で11XP（1.1x）", () => {
+      expect(getXPForCorrect(5, true)).toBe(11);
     });
-    it("コンボ5で25XP（2.5x）", () => {
-      expect(getXPForCorrect(5)).toBe(25);
+    it("2回目以降・コンボ1で1XP", () => {
+      expect(getXPForCorrect(1, false)).toBe(1);
+    });
+    it("2回目以降・コンボ5で1.1XP（1.1x）", () => {
+      expect(getXPForCorrect(5, false)).toBe(1.1);
     });
   });
 

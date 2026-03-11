@@ -43,6 +43,7 @@ describe("QuizSession", () => {
         questions={singleQuestion}
         lessonId="test-lesson"
         lessonTitle="テスト"
+        backHref="/"
       />
     );
 
@@ -54,11 +55,16 @@ describe("QuizSession", () => {
     const correctOption = await screen.findByRole("button", { name: /選択肢 \d+: 正解$/ });
     fireEvent.click(correctOption);
 
+    // 解答する
+    const confirmButton = await screen.findByRole("button", { name: "解答する" });
+    fireEvent.click(confirmButton);
+
     // 次へ
     const nextButton = await screen.findByRole("button", { name: "結果を見る" });
     fireEvent.click(nextButton);
 
-    expect(screen.getByText(/Lesson Complete/i)).toBeTruthy();
+    // 完了画面が出ていることをレッスン名とリトライボタンで確認
     expect(screen.getByText("テスト")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "もう一度挑戦" })).toBeTruthy();
   });
 });

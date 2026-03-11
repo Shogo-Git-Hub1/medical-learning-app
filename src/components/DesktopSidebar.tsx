@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { useProgressContext } from "@/contexts/ProgressContext";
+import { getDueReviewQuestionIdsThatExist } from "@/services/lessonService";
 
 type NavItem = {
   href: string;
@@ -31,6 +32,16 @@ const NAV_ITEMS: NavItem[] = [
         <rect x="14" y="3" width="7" height="7" rx="1.5" />
         <rect x="3" y="14" width="7" height="7" rx="1.5" />
         <rect x="14" y="14" width="7" height="7" rx="1.5" />
+      </svg>
+    ),
+  },
+  {
+    href: "/review",
+    label: "復習",
+    icon: (active) => (
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.5 : 2} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+        <path d="M3 3v5h5" />
       </svg>
     ),
   },
@@ -63,6 +74,7 @@ export function DesktopSidebar() {
 
   const { progress, level, xpInLevel, xpNeededForNext } = useProgressContext();
   const xpPct = Math.round((xpInLevel / (xpInLevel + xpNeededForNext)) * 100);
+  const dueCount = getDueReviewQuestionIdsThatExist(progress).length;
 
   const isActive = (href: string) => {
     if (!pathname) return false;
@@ -98,6 +110,7 @@ export function DesktopSidebar() {
       <nav className="flex-1 px-3 space-y-0.5" aria-label="メインナビゲーション">
         {NAV_ITEMS.map(({ href, label, icon }) => {
           const active = isActive(href);
+          const isReview = href === "/review";
           return (
             <Link
               key={href}
@@ -110,8 +123,17 @@ export function DesktopSidebar() {
                 border: `2px solid ${active ? "rgba(88,204,2,0.22)" : "transparent"}`,
               }}
             >
-              <span style={{ color: active ? "#58cc02" : "#9ca3af" }}>
+              <span className="relative" style={{ color: active ? "#58cc02" : "#9ca3af" }}>
                 {icon(active)}
+                {isReview && dueCount > 0 && (
+                  <span
+                    className="absolute -top-1 -right-1 min-w-[16px] h-[16px] rounded-full flex items-center justify-center text-white font-bold leading-none px-0.5"
+                    style={{ background: "#E53935", fontSize: "9px" }}
+                    aria-label={`復習 ${dueCount} 問`}
+                  >
+                    {dueCount > 99 ? "99" : dueCount}
+                  </span>
+                )}
               </span>
               {label}
             </Link>

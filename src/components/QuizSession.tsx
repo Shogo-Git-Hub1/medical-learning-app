@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import type { Question } from "@/types";
 import { useProgressContext } from "@/contexts/ProgressContext";
-import { setLastLessonResult } from "@/lib/progress";
+import { setLastLessonResult, getXPForCorrect } from "@/lib/progress";
 import { shuffle, getStableCharacterIndex } from "@/lib/utils";
 import { PushButton } from "@/components/ui/PushButton";
 import { LightningComboOverlay } from "@/components/LightningComboOverlay";
@@ -34,12 +34,21 @@ type Props = {
   lessonLevel?: number;
   /** 戻り先を明示的に指定する場合（指定がなければ ?from= クエリから解決） */
   backHref?: string;
+  /** 復習セッション限定: 次バッチの残り問題数（0 のとき「次へ」ボタンを非表示） */
+  remainingReviewCount?: number;
+  /** 復習セッション限定: 「次の復習問題へ」ボタン押下時のコールバック */
+  onNextReviewBatch?: () => void;
+  /**
+   * false を渡すとマウント時のイントロアニメーションをスキップして即クイズを開始する。
+   * 復習セッションの 2 バッチ目以降で使用。デフォルト true。
+   */
+  initialShowIntro?: boolean;
 };
 
-export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1, backHref: backHrefProp }: Props) {
-  const { recordAnswer, completeLesson } = useProgressContext();
+export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1, backHref: backHrefProp, remainingReviewCount = 0, onNextReviewBatch, initialShowIntro = true }: Props) {
+  const { progress, recordAnswer, completeLesson } = useProgressContext();
   const searchParams = useSearchParams();
-  const backHref = backHrefProp ?? resolveBackHref(searchParams.get("from") ?? "");
+  const backHref = backHrefProp ?? resolveBackHref(searchParams?.get("from") ?? "");
 
   // セッションイントロ（lessonId から決定的にキャラを選び、SSR/クライアントでハイドレーション不一致を防ぐ）
   const introCharacter = useMemo(
@@ -53,7 +62,7 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1,
     () => getSessionIntroLine(introCharacter, lessonTitle, lessonLevel, questions.length),
     [introCharacter, lessonTitle, lessonLevel, questions.length]
   );
-  const [showIntro, setShowIntro] = useState(true);
+  const [showIntro, setShowIntro] = useState(initialShowIntro);
   const [introFading, setIntroFading] = useState(false);
 
   const skipIntro = () => {
@@ -62,12 +71,16 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1,
   };
 
   useEffect(() => {
+    // initialShowIntro=false のバッチではイントロを表示しないのでタイマー不要
+    if (!initialShowIntro) return;
     const fadeTimer = setTimeout(() => setIntroFading(true), 3200);
     const hideTimer = setTimeout(() => setShowIntro(false), 3500);
     return () => {
       clearTimeout(fadeTimer);
       clearTimeout(hideTimer);
     };
+    // initialShowIntro はマウント時に固定される値なので deps から除外して安全
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 離脱確認シートの開閉
@@ -87,10 +100,16 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1,
   // lessonId のみを依存にしていると再挑戦時に同じ選択肢順になるため、
   // handleRetry でインクリメントして再シャッフルを明示的に発火させる。
   const [shuffleSeed, setShuffleSeed] = useState(0);
+  // 間違え直しモード: null のときは全問出題、Set のときはその ID の問題だけ出題。
+  // handleRetry で null にリセット、handleRetryWrong でセットする。
+  const [wrongQuestionIds, setWrongQuestionIds] = useState<ReadonlySet<string> | null>(null);
 
   const displayQuestions = useMemo(
     () =>
-      questions.map((q) => ({
+      (wrongQuestionIds
+        ? questions.filter((q) => wrongQuestionIds.has(q.id))
+        : questions
+      ).map((q) => ({
         ...q,
         options: shuffle([...q.options]),
       })),
@@ -98,9 +117,9 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1,
     // questions を依存に含めると、recordAnswer などでコンテキストが更新された際に
     // 親が再レンダーして questions の参照が変わり、セッション途中で再シャッフルが
     // 起きて「選択した瞬間に別の問題が表示される」バグの原因になる。
-    // shuffleSeed はリトライ時のみインクリメントされるため安全。
+    // shuffleSeed・wrongQuestionIds はいずれもリトライ時のみ変更されるため安全。
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [lessonId, shuffleSeed]
+    [lessonId, shuffleSeed, wrongQuestionIds]
   );
 
   const current = displayQuestions[index];
@@ -120,24 +139,33 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1,
 
   const handleSelect = useCallback(
     (optionId: string) => {
-      if (showFeedback || !current || isSelectInFlight.current) return;
-      isSelectInFlight.current = true;
-      const correctAnswer = optionId === current.correctOptionId;
-      const comboBefore = getComboFromResults(results);
-      const comboAfter = correctAnswer ? comboBefore + 1 : 0;
+      if (showFeedback) return;
       setSelectedId(optionId);
-      setShowFeedback(true);
-      setResults((r) => [...r, correctAnswer]);
-      if (comboAfter > 0) setMaxCombo((prev) => Math.max(prev, comboAfter));
-      recordAnswer(current.id, correctAnswer, comboAfter);
-      if (correctAnswer) playCorrect();
-      else playWrong();
     },
-    [showFeedback, current, results, getComboFromResults, recordAnswer]
+    [showFeedback]
   );
+
+  const handleConfirm = useCallback(() => {
+    if (showFeedback || !selectedId || !current || isSelectInFlight.current) return;
+    isSelectInFlight.current = true;
+    const correctAnswer = selectedId === current.correctOptionId;
+    const comboBefore = getComboFromResults(results);
+    const comboAfter = correctAnswer ? comboBefore + 1 : 0;
+    setShowFeedback(true);
+    setResults((r) => [...r, correctAnswer]);
+    if (comboAfter > 0) setMaxCombo((prev) => Math.max(prev, comboAfter));
+    if (correctAnswer) {
+      const isFirstTime = !progress.questionReviews[current.id]?.everCorrect;
+      setEarnedXP((prev) => Math.round((prev + getXPForCorrect(comboAfter, isFirstTime)) * 10) / 10);
+    }
+    recordAnswer(current.id, correctAnswer, comboAfter);
+    if (correctAnswer) playCorrect();
+    else playWrong();
+  }, [showFeedback, selectedId, current, results, getComboFromResults, recordAnswer]);
 
   const displayCombo = getComboFromResults(results);
   const [maxCombo, setMaxCombo] = useState(0);
+  const [earnedXP, setEarnedXP] = useState(0);
   const [showCompleted, setShowCompleted] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [showLightningOverlay, setShowLightningOverlay] = useState(false);
@@ -155,6 +183,7 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1,
   // handleNext の二重呼び出し（Enterキーリピートなど）を防ぐフラグ。
   // フィードバック非表示になったタイミングで useEffect がリセットする。
   const handleRetry = useCallback(() => {
+    setWrongQuestionIds(null);
     setShowCompleted(false);
     setShowConfetti(false);
     setShowLightningOverlay(false);
@@ -163,10 +192,34 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1,
     setShowFeedback(false);
     setResults([]);
     setMaxCombo(0);
+    setEarnedXP(0);
     setShuffleSeed((s) => s + 1);
     isNextInFlight.current = false;
     isSelectInFlight.current = false;
   }, []);
+
+  // 間違えた問題だけ再挑戦するコールバック。
+  // showCompleted 表示中に displayQuestions・results は完全な状態で保持されている。
+  const handleRetryWrong = useCallback(() => {
+    const ids = new Set(
+      displayQuestions
+        .filter((_, i) => results[i] === false)
+        .map((q) => q.id)
+    );
+    setWrongQuestionIds(ids);
+    setShowCompleted(false);
+    setShowConfetti(false);
+    setShowLightningOverlay(false);
+    setIndex(0);
+    setSelectedId(null);
+    setShowFeedback(false);
+    setResults([]);
+    setMaxCombo(0);
+    setEarnedXP(0);
+    setShuffleSeed((s) => s + 1);
+    isNextInFlight.current = false;
+    isSelectInFlight.current = false;
+  }, [displayQuestions, results]);
 
   const isNextInFlight = useRef(false);
 
@@ -193,6 +246,7 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1,
 
   const questionRegionRef = useRef<HTMLDivElement>(null);
   const nextButtonRef = useRef<HTMLButtonElement>(null);
+  const confirmButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!current) return;
@@ -231,6 +285,13 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1,
         handleNext();
         return;
       }
+      // Enter で確認（選択済み・フィードバック前）
+      if (e.key === "Enter" && !showFeedback && selectedId) {
+        if ((e.target as Element) === confirmButtonRef.current) return;
+        e.preventDefault();
+        handleConfirm();
+        return;
+      }
       if (!showFeedback && ["1", "2", "3", "4"].includes(e.key)) {
         const optionIndex = Number(e.key) - 1;
         if (optionIndex < current.options.length) {
@@ -239,7 +300,7 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1,
         }
       }
     },
-    [current, showFeedback, handleNext, handleSelect]
+    [current, showFeedback, selectedId, handleNext, handleConfirm, handleSelect]
   );
 
   // ─── 完了画面 ─────────────────────────────────────────────────────────
@@ -247,6 +308,7 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1,
     const correctCount = results.filter(Boolean).length;
     const total = displayQuestions.length;
     const isGoodScore = total > 0 && correctCount >= total * 0.8;
+    const wrongCount = total - correctCount;
     return (
       <QuizComplete
         lessonTitle={lessonTitle}
@@ -257,7 +319,12 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1,
         showConfetti={showConfetti}
         nextLesson={getNextLessonAfter(lessonId)}
         maxCombo={maxCombo}
+        earnedXP={earnedXP}
         onRetry={handleRetry}
+        wrongCount={wrongCount}
+        onRetryWrong={wrongCount > 0 ? handleRetryWrong : undefined}
+        remainingReviewCount={remainingReviewCount}
+        onNextReviewBatch={onNextReviewBatch}
       />
     );
   }
@@ -339,10 +406,9 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1,
 
   const questionPositionId = "quiz-question-position";
   const questionLabelId = "quiz-question-label";
-  const correctAnswerCount = results.filter(Boolean).length;
-  // 回答済み問題数ベース：答えれば常にバーが前進する（正誤に関わらず進捗感を維持）
-  const progressPct = displayQuestions.length > 0
-    ? Math.round((results.length / displayQuestions.length) * 100)
+  // 問題位置バー用：現在の問題番号ベース（何問目を解いているかを示す）
+  const questionPct = displayQuestions.length > 0
+    ? Math.round(((index + 1) / displayQuestions.length) * 100)
     : 0;
 
   // ─── クイズ本体 ──────────────────────────────────────────────────────
@@ -371,30 +437,27 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1,
         {/* × ボタン */}
         {CloseButton}
 
-        {/* プログレスバー */}
+        {/* 問題位置バー（青）：現在何問目かを示す */}
         <div
-          className="flex-1 relative h-[14px] rounded-full overflow-hidden"
+          className="flex-1 relative h-[9px] rounded-full overflow-hidden"
+          style={{ background: "rgba(0,0,0,0.08)" }}
           role="progressbar"
-          aria-valuenow={results.length}
-          aria-valuemin={0}
+          aria-valuenow={index + 1}
+          aria-valuemin={1}
           aria-valuemax={displayQuestions.length}
-          aria-label={`${results.length} / ${displayQuestions.length} 問回答済み`}
-          style={{
-            background: "rgba(0,0,0,0.08)",
-            boxShadow: "inset 0 2px 4px rgba(0,0,0,0.1)",
-          }}
+          aria-label={`${index + 1} / ${displayQuestions.length} 問目`}
         >
           <div
             className="h-full rounded-full transition-all duration-500 ease-out"
             style={{
-              width: `${progressPct}%`,
-              background: "linear-gradient(90deg, #58cc02 0%, #89e219 100%)",
-              boxShadow: "0 2px 8px rgba(88,204,2,0.45), inset 0 1px 0 rgba(255,255,255,0.3)",
+              width: `${questionPct}%`,
+              background: "linear-gradient(90deg, #1cb0f6 0%, #58d8ff 100%)",
+              boxShadow: "0 1px 4px rgba(28,176,246,0.5)",
             }}
           />
         </div>
 
-        {/* コンボバッジ or キーボードヒント */}
+        {/* コンボバッジ */}
         <div className="flex-shrink-0 w-14 flex justify-end">
           {displayCombo >= 1 ? (
             <div
@@ -432,6 +495,8 @@ export function QuizSession({ questions, lessonId, lessonTitle, lessonLevel = 1,
         onSelect={handleSelect}
         onNext={handleNext}
         nextButtonRef={nextButtonRef}
+        onConfirm={handleConfirm}
+        confirmButtonRef={confirmButtonRef}
       />
 
     </div>

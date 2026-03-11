@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
+import { useProgressContext } from "@/contexts/ProgressContext";
+import { getDueReviewQuestionIdsThatExist } from "@/services/lessonService";
 
 // Per-tab accent color — intentionally distinct to add visual interest
 const NAV_ITEMS = [
@@ -33,14 +35,14 @@ const NAV_ITEMS = [
     ),
   },
   {
-    href: "/browse",
-    label: "ブラウズ",
-    color: "#CE93D8",
-    border: "#7B1FA2",
+    href: "/review",
+    label: "復習",
+    color: "#9575CD",
+    border: "#4527A0",
     icon: (active: boolean) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.5 : 1.8} strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="11" cy="11" r="8" />
-        <path d="M21 21l-4.35-4.35" />
+        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+        <path d="M3 3v5h5" />
       </svg>
     ),
   },
@@ -63,6 +65,9 @@ export function BottomNav() {
   const [pathname, setPathname] = useState("");
   useEffect(() => { setPathname(rawPathname); }, [rawPathname]);
 
+  const { progress } = useProgressContext();
+  const dueCount = getDueReviewQuestionIdsThatExist(progress).length;
+
   const isActive = (href: string) => {
     if (!pathname) return false;
     if (href === "/") return pathname === "/";
@@ -81,6 +86,7 @@ export function BottomNav() {
       <ul className="flex items-stretch justify-around px-1 pb-safe">
         {NAV_ITEMS.map(({ href, label, color, border, icon }) => {
           const active = isActive(href);
+          const isReview = href === "/review";
           return (
             <li key={href} className="flex-1">
               <Link
@@ -115,6 +121,16 @@ export function BottomNav() {
                   }}
                 >
                   {icon(active)}
+                  {/* 復習バッジ */}
+                  {isReview && dueCount > 0 && (
+                    <span
+                      className="absolute -top-1 -right-1.5 min-w-[14px] h-[14px] rounded-full flex items-center justify-center text-white font-bold leading-none px-0.5"
+                      style={{ background: "#E53935", fontSize: "8px" }}
+                      aria-label={`復習 ${dueCount} 問`}
+                    >
+                      {dueCount > 99 ? "99" : dueCount}
+                    </span>
+                  )}
                 </span>
                 <span
                   className="relative text-[10px] font-bold font-nunito transition-colors duration-200"

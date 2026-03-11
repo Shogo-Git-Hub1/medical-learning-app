@@ -9,7 +9,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Lesson } from "@/types";
 import type { SubjectTheme } from "@/data/subjectThemes";
-import { getLessonStates, getCurrentLessonIndex } from "@/services/lessonService";
+import { getLessonStates, getCurrentLessonIndex, getQuestionsById } from "@/services/lessonService";
 import { PushButton } from "@/components/ui/PushButton";
 
 // 型は "use client" 不要な共有ファイルから再エクスポート（テーマ定数は @/data/subjectThemes から直接 import する方針）
@@ -297,7 +297,7 @@ export function LessonPreviewSheet({
   if (!data) return null;
 
   const { lesson, theme, done, locked, prevLessonTitle } = data;
-  const questionCount = lesson.questionIds.length;
+  const questionCount = getQuestionsById(lesson.questionIds).length;
   const xpEstimate    = questionCount * 10;
 
   return (

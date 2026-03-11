@@ -12,23 +12,19 @@
   --pastel-blue: #bbf2ff;
   --pastel-purple: #9069cd;
   --pastel-ink: #3c3c3c;
-  --pastel-border: #afafaf;
+  --pastel-border: #e5e7eb;
 
-  /* ニューモーフィズム */
-  --neu-bg: #E8ECF2;
-  --neu-dark: rgba(197, 202, 209, 0.72);
-  --neu-light: rgba(255, 255, 255, 0.92);
-  --neu-shadow-sm: 4px 4px 8px var(--neu-dark), -4px -4px 8px var(--neu-light);
-  --neu-shadow-md: 8px 8px 18px var(--neu-dark), -8px -8px 18px var(--neu-light);
-  --neu-shadow-lg: 14px 14px 28px var(--neu-dark), -14px -14px 28px var(--neu-light);
-  --neu-inset: inset 4px 4px 8px var(--neu-dark), inset -4px -4px 8px var(--neu-light);
-  --glow-green: 0 0 14px rgba(88, 204, 2, 0.45), 0 0 30px rgba(88, 204, 2, 0.15);
+  /* フラット・クリーン（白背景） */
+  --neu-bg: #ffffff;
+  --neu-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --neu-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.10);
+  --neu-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --neu-inset: inset 0 2px 6px rgba(0, 0, 0, 0.06);
+  --glow-green: 0 0 14px rgba(88, 204, 2, 0.35), 0 0 30px rgba(88, 204, 2, 0.12);
 }
 
 body {
-  background-color: var(--neu-bg);
-  background-image: radial-gradient(circle, rgba(88, 204, 2, 0.07) 1px, transparent 1px);
-  background-size: 28px 28px;
+  background-color: #ffffff;
   color: var(--pastel-ink);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -39,31 +35,27 @@ h1, h2, h3, h4 {
 }
 
 /* ── クイズ選択肢ボタン 3D インタラクション ──────────────────────────
-   inline style の box-shadow (ledge) と組み合わせて立体感を演出する。
-   hover: 浮き上がり / active: ledge を踏み込むプレス                    */
+   bottom ledge shadow との組み合わせで Duolingo 式の立体感を演出する */
 .quiz-option-3d {
   transition: transform 150ms cubic-bezier(0.34, 1.1, 0.64, 1),
               box-shadow 150ms ease,
               opacity 200ms ease;
 }
 .quiz-option-3d:not([disabled]):hover {
-  transform: translateY(-3px);
+  transform: translateY(-2px);
 }
 .quiz-option-3d:not([disabled]):active {
   transform: translateY(4px);
   transition-duration: 80ms;
 }
 
-/* ── バー選択 pop アニメーション ──────────────────────────────────── */
-@keyframes quiz-bar-pop {
-  0%   { transform: scaleX(0.3); opacity: 0.5; }
-  60%  { transform: scaleX(1.2); opacity: 1;   }
-  80%  { transform: scaleX(0.92);               }
-  100% { transform: scaleX(1);                  }
+/* ── フローティングカード 上下揺らぎ ──────────────────────────────── */
+@keyframes float-bob {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-5px); }
 }
-.quiz-bar-pop {
-  transform-origin: left center;
-  animation: quiz-bar-pop 320ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+.animate-float-bob {
+  animation: float-bob 3s ease-in-out infinite;
 }
 
 /* ── ボトムシート スライドアップ ──────────────────────────────────── */
@@ -89,7 +81,7 @@ h1, h2, h3, h4 {
     box-shadow: var(--neu-shadow-lg);
   }
   .neu-inset {
-    background: var(--neu-bg);
+    background: #f7f7f7;
     box-shadow: var(--neu-inset);
   }
   .neu-glow {

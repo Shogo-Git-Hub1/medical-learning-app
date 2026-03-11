@@ -3,7 +3,7 @@
 import { RouteErrorFallback } from "@/components/RouteErrorFallback";
 import { ROUTE_ERROR_CONFIG } from "@/config/routeErrorConfig";
 
-export default function ReviewError({
+export default function ReviewSessionError({
   error,
   reset,
 }: {

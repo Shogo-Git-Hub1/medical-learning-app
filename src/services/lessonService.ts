@@ -1,7 +1,10 @@
-import type { QuestionDatabase, Lesson } from "@/types";
+import type { QuestionDatabase, Lesson, Question } from "@/types";
 import { getToday } from "@/lib/progress";
 import type { UserProgress, LastLessonResult } from "@/lib/progress";
 import { subjectQuestions, subjectLessons, SUBJECT_DISPLAY_ORDER } from "./subjects";
+
+/** 復習セッションで一度に出題する問題数 */
+export const REVIEW_BATCH_SIZE = 10;
 
 /**
  * 構造化された問題データベース
@@ -22,16 +25,29 @@ export function getQuestionsById(ids: string[]) {
 }
 
 /**
+ * 今日復習対象の問題を nextReview が古い順（最も長く放置されたものを優先）で返す。
+ * 復習セッションのバッチ表示と、ホームの件数カウントの両方で使用する唯一の正規ロジック。
+ */
+export function getDueReviewQuestionsSortedByOldest(progress: UserProgress): Question[] {
+  const today = getToday();
+  // nextReview が古い順にソートした ID リストを作成
+  const sortedIds = Object.entries(progress.questionReviews)
+    .filter(([, r]) => r.nextReview <= today)
+    .sort(([, a], [, b]) => a.nextReview.localeCompare(b.nextReview))
+    .map(([id]) => id);
+  // DB に存在する問題のみ取得。ソート順を維持するため getQuestionsById（order ソート）は使わない
+  const questionMap = new Map(questionDb.questions.map((q) => [q.id, q]));
+  return sortedIds
+    .map((id) => questionMap.get(id))
+    .filter((q): q is NonNullable<typeof q> => q != null);
+}
+
+/**
  * 今日復習対象かつ問題DBに存在する問題ID一覧。
- * ホームの件数表示と復習ページの一覧で同じロジックを使い、表示の食い違いを防ぐ。
+ * ホームの件数表示で使用。getDueReviewQuestionsSortedByOldest の薄いラッパー。
  */
 export function getDueReviewQuestionIdsThatExist(progress: UserProgress): string[] {
-  const today = getToday();
-  const dueIds = Object.entries(progress.questionReviews)
-    .filter(([, r]) => r.nextReview <= today)
-    .map(([id]) => id);
-  const questions = getQuestionsById(dueIds);
-  return questions.map((q) => q.id);
+  return getDueReviewQuestionsSortedByOldest(progress).map((q) => q.id);
 }
 
 /** レッスンIDでレッスンとその問題一覧を取得 */
