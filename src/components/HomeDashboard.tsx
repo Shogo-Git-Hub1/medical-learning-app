@@ -308,7 +308,7 @@ function ReviewQueueCard({ dueCount }: { dueCount: number }) {
       >
         <div className="max-w-2xl mx-auto">
           <Link
-            href="/review"
+            href="/review/session"
             className="animate-float-bob flex items-center justify-between rounded-2xl px-5 py-3.5 transition-all duration-150 active:scale-[0.97]"
             style={{
               background: "linear-gradient(135deg, #7E57C2, #512DA8)",
@@ -323,7 +323,7 @@ function ReviewQueueCard({ dueCount }: { dueCount: number }) {
       <div className="hidden md:block md:fixed md:bottom-6 md:left-[240px] md:right-0 md:z-10 md:px-4">
         <div className="max-w-2xl mx-auto">
           <Link
-            href="/review"
+            href="/review/session"
             className="animate-float-bob flex items-center justify-between rounded-2xl px-5 py-3.5 transition-all duration-150 hover:opacity-90 active:scale-[0.97]"
             style={{
               background: "linear-gradient(135deg, #7E57C2, #512DA8)",
